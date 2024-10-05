@@ -65,14 +65,34 @@ impl<T: Num, const SCALE: u8> FixedDecimal<T, SCALE> {
     /// # Example
     ///
     /// ```
-    /// # use rust_fixed_decimal::FixedDecimalI128P4;
+    /// # use rust_fixed_decimal::FixedDecimalI128;
     /// #
-    /// let pi = FixedDecimalI128P4::new(31415);
+    /// let pi = FixedDecimalI128::<4>::new(31415);
     /// assert_eq!(pi.to_string(), "3.1415");
     /// ```
     #[must_use]
     pub fn new(num: T) -> Self {
         Self(num)
+    }
+
+    /// Cast a `FixedDecimal` scale keeping the mantissa.
+    /// "Only move the point separator"
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// # use rust_fixed_decimal::FixedDecimalI128;
+    /// #
+    /// type Pennie = FixedDecimalI128<0>;
+    /// type Dollar = FixedDecimalI128<2>;
+    ///
+    /// let amount_cents = Pennie::new(123_45);
+    /// let amount: Dollar = amount_cents.with_scale::<2>();
+    /// assert_eq!(amount.to_string(), "123.45");
+    /// ```
+    #[must_use]
+    pub fn with_scale<const TARGET_SCALE: u8>(self) -> FixedDecimal<T, TARGET_SCALE> {
+        FixedDecimal::<T, TARGET_SCALE>::new(self.0)
     }
 
     #[must_use]
