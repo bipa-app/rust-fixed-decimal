@@ -1,9 +1,11 @@
 mod constants;
+mod error;
 mod str;
 
 use core::fmt;
-use std::ops;
+use std::{ops, str::FromStr};
 
+use error::Error;
 use num_traits::ConstZero;
 
 // TODO: make it private
@@ -11,15 +13,20 @@ pub trait Num:
     Copy
     + num_traits::Euclid
     + num_traits::Zero
+    + num_traits::Pow<u8, Output = Self>
     + From<u8>
     + ops::Sub<Output = Self>
     + num_traits::ConstZero
     + Eq
     + Ord
+    + FromStr
+    + ops::Mul<Output = Self>
+    + fmt::Debug
+    + Default
 {
     type Unsigned: Num + num_traits::Unsigned;
 
-    fn abs(self) -> u128;
+    fn abs(self) -> u128; // TODO: prober handle this
     fn is_positive(self) -> bool;
     fn is_negative(self) -> bool {
         !self.is_positive()
@@ -118,6 +125,14 @@ impl<T: Num, const E: u8> fmt::Display for FixedDecimal<T, E> {
 impl<T: Num, const E: u8> fmt::Debug for FixedDecimal<T, E> {
     fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
         fmt::Display::fmt(self, f)
+    }
+}
+
+impl<T: Num, const E: u8> FromStr for FixedDecimal<T, E> {
+    type Err = Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        crate::str::parse_str_radix_10(s)
     }
 }
 

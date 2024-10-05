@@ -1,4 +1,4 @@
-use crate::{constants::MAX_STR_BUFFER_SIZE, FixedDecimal, Num};
+use crate::{constants::MAX_STR_BUFFER_SIZE, error::Error, FixedDecimal, Num};
 
 use arrayvec::ArrayString;
 
@@ -56,10 +56,33 @@ pub(crate) fn to_str_internal<T: Num, const SCALE: u8>(
     (rep, prec_rem)
 }
 
+pub(crate) fn parse_str_radix_10<T: Num, const SCALE: u8>(
+    str: &str,
+) -> Result<FixedDecimal<T, SCALE>, Error> {
+    let (int, frac) = str
+        .split_once('.')
+        .map_or((str, None), |(int, frac)| (int, Some(frac)));
+
+    // TODO: proper handle overflow
+
+    let int = str::parse::<T>(int).unwrap_or_else(|_| panic!("fail to parse int part"));
+    let frac = frac
+        .map_or(Ok(T::ZERO), |v| {
+            std::str::FromStr::from_str(&v[..std::cmp::min(v.len(), SCALE.into())])
+        })
+        .unwrap_or_else(|_| panic!("fail to parse frac part"));
+    let shift = Into::<T>::into(10u8).pow(SCALE);
+
+    Ok(FixedDecimal::<T, SCALE>::new(int * shift + frac))
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::{FixedDecimalI128P0, FixedDecimalI128P1, FixedDecimalI128P4, FixedDecimalI128P5};
+    use crate::{
+        FixedDecimalI128P0, FixedDecimalI128P1, FixedDecimalI128P2, FixedDecimalI128P4,
+        FixedDecimalI128P5,
+    };
     mod to_str_internal {
         use super::*;
         #[test]
@@ -136,6 +159,32 @@ mod test {
                     .0
                     .as_str(),
                 "0.00"
+            );
+        }
+    }
+
+    mod parse_str_radix_10 {
+        use super::*;
+
+        #[test]
+        fn a() {
+            assert_eq!(
+                parse_str_radix_10("1234.56"),
+                Ok(FixedDecimalI128P2::new(123456))
+            );
+        }
+        #[test]
+        fn b() {
+            assert_eq!(
+                parse_str_radix_10("1234"),
+                Ok(FixedDecimalI128P2::new(123400))
+            );
+        }
+        #[test]
+        fn c() {
+            assert_eq!(
+                parse_str_radix_10("1234.567"),
+                Ok(FixedDecimalI128P2::new(123456))
             );
         }
     }
