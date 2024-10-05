@@ -1,4 +1,4 @@
-use crate::{constants::MAX_STR_BUFFER_SIZE, error::Error, FixedDecimal, Num};
+use crate::{constants::MAX_STR_BUFFER_SIZE, error::Error, fixed_decimal::Num, FixedDecimal};
 
 use arrayvec::ArrayString;
 
