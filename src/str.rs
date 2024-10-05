@@ -2,8 +2,6 @@ use crate::{constants::MAX_STR_BUFFER_SIZE, FixedDecimal, Num};
 
 use arrayvec::ArrayString;
 
-use std::{char, cmp::min};
-
 // impl that doesn't allocate for serialization purposes.
 pub(crate) fn to_str_internal<T: Num, const SCALE: u8>(
     value: &FixedDecimal<T, SCALE>,
@@ -11,8 +9,6 @@ pub(crate) fn to_str_internal<T: Num, const SCALE: u8>(
     precision: Option<usize>,
 ) -> (ArrayString<MAX_STR_BUFFER_SIZE>, Option<usize>) {
     let total_len = value.mantissa().abs().ilog10() + 1; // 4
-    let scale: usize = SCALE.into();
-    let zero_len = scale.saturating_sub(total_len as usize);
     let (prec, prec_rem) = match precision {
         Some(prec) => {
             let max: usize = u8::MAX.into();
@@ -31,7 +27,7 @@ pub(crate) fn to_str_internal<T: Num, const SCALE: u8>(
         rep.push('-');
     }
 
-    let add_digit = |rep: &mut ArrayString<MAX_STR_BUFFER_SIZE>, i| {
+    let push_digit = |rep: &mut ArrayString<MAX_STR_BUFFER_SIZE>, i| {
         let digit = ((value.mantissa().abs() / 10u128.pow(i)) % 10) as u8;
         rep.push(char::from(b'0' + digit));
     };
@@ -39,20 +35,17 @@ pub(crate) fn to_str_internal<T: Num, const SCALE: u8>(
     if total_len <= SCALE.into() {
         rep.push('0');
         rep.push('.');
-        for _ in 0..min(zero_len, prec) {
-            rep.push('0');
-        }
-        for i in (0..total_len).rev().take(prec.saturating_sub(zero_len)) {
-            add_digit(&mut rep, i);
+        for i in (0..SCALE).rev().take(prec) {
+            push_digit(&mut rep, i.into());
         }
     } else {
         for i in (SCALE.into()..total_len).rev() {
-            add_digit(&mut rep, i);
+            push_digit(&mut rep, i);
         }
         if prec != 0 {
             rep.push('.');
             for i in (0u32..SCALE.into()).rev() {
-                add_digit(&mut rep, i);
+                push_digit(&mut rep, i);
             }
             for _ in 0..(prec.saturating_sub(SCALE.into())) {
                 rep.push('0');
