@@ -5,7 +5,7 @@ mod str;
 
 pub use fixed_decimal::FixedDecimal;
 
-pub type FixedDecimalI128<const E: i32> = FixedDecimal<i128, E>;
+pub type FixedDecimalI128<const E: u8> = FixedDecimal<i128, E>;
 
 pub type FixedDecimalI128P0 = FixedDecimal<i128, 0>;
 pub type FixedDecimalI128P1 = FixedDecimal<i128, 1>;
