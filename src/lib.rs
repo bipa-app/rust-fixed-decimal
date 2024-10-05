@@ -2,9 +2,21 @@ mod constants;
 mod str;
 
 use core::fmt;
+use std::ops;
+
+use num_traits::ConstZero;
 
 // TODO: make it private
-pub trait Num: Copy + num_traits::Euclid + num_traits::Zero + From<u8> {
+pub trait Num:
+    Copy
+    + num_traits::Euclid
+    + num_traits::Zero
+    + From<u8>
+    + ops::Sub<Output = Self>
+    + num_traits::ConstZero
+    + Eq
+    + Ord
+{
     type Unsigned: Num + num_traits::Unsigned;
 
     fn abs(self) -> u128;
@@ -39,6 +51,7 @@ impl Num for u128 {
 /// `FixedDecimal` represents a 128 or 64 bits representation of a fixed-precision decimal number.
 /// The finite set of values of type `FixedDecimal` are of the form m / 10<sup>E</sup>,
 /// where m is an integer `T`, and e is an i32
+#[derive(Clone, Copy, Eq, PartialEq, PartialOrd, Ord)]
 pub struct FixedDecimal<T: Num, const SCALE: u8>(T);
 
 /// `Decimal` represents a 128 bit representation of a fixed-precision decimal number.
@@ -101,5 +114,34 @@ impl<T: Num, const E: u8> fmt::Display for FixedDecimal<T, E> {
 impl<T: Num, const E: u8> fmt::Debug for FixedDecimal<T, E> {
     fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
         fmt::Display::fmt(self, f)
+    }
+}
+
+impl<T: Num, const E: u8> ops::Add for FixedDecimal<T, E> {
+    type Output = Self;
+
+    fn add(self, rhs: Self) -> Self::Output {
+        Self(self.0 + rhs.0)
+    }
+}
+
+impl<T: Num, const E: u8> ops::Sub for FixedDecimal<T, E> {
+    type Output = Self;
+
+    fn sub(self, rhs: Self) -> Self::Output {
+        Self(self.0 - rhs.0)
+    }
+}
+impl<T: Num, const E: u8> num_traits::ConstZero for FixedDecimal<T, E> {
+    const ZERO: Self = Self(T::ZERO);
+}
+
+impl<T: Num, const E: u8> num_traits::Zero for FixedDecimal<T, E> {
+    fn zero() -> Self {
+        Self::ZERO
+    }
+
+    fn is_zero(&self) -> bool {
+        *self == Self::ZERO
     }
 }
