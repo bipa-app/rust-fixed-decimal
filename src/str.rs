@@ -79,16 +79,14 @@ pub(crate) fn parse_str_radix_10<T: Num, const SCALE: u8>(
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::{
-        FixedDecimalI128P0, FixedDecimalI128P1, FixedDecimalI128P2, FixedDecimalI128P4,
-        FixedDecimalI128P5,
-    };
+    use crate::FixedDecimalI128;
     mod to_str_internal {
+
         use super::*;
         #[test]
         fn a() {
             assert_eq!(
-                to_str_internal(&FixedDecimalI128P0::new(1234), true, None)
+                to_str_internal::<_, 0>(&FixedDecimalI128::new(1234), true, None)
                     .0
                     .as_str(),
                 "1234"
@@ -97,7 +95,7 @@ mod test {
         #[test]
         fn b() {
             assert_eq!(
-                to_str_internal(&FixedDecimalI128P0::new(-1234), true, None)
+                to_str_internal::<_, 0>(&FixedDecimalI128::new(-1234), true, None)
                     .0
                     .as_str(),
                 "-1234"
@@ -106,7 +104,7 @@ mod test {
         #[test]
         fn c() {
             assert_eq!(
-                to_str_internal(&FixedDecimalI128P1::new(1234), true, None)
+                to_str_internal::<_, 1>(&FixedDecimalI128::new(1234), true, None)
                     .0
                     .as_str(),
                 "123.4"
@@ -115,7 +113,7 @@ mod test {
         #[test]
         fn d() {
             assert_eq!(
-                to_str_internal(&FixedDecimalI128P5::new(1234), true, None)
+                to_str_internal::<_, 5>(&FixedDecimalI128::new(1234), true, None)
                     .0
                     .as_str(),
                 "0.01234"
@@ -125,7 +123,7 @@ mod test {
         #[test]
         fn e() {
             assert_eq!(
-                to_str_internal(&FixedDecimalI128P4::new(1234), true, None)
+                to_str_internal::<_, 4>(&FixedDecimalI128::new(1234), true, None)
                     .0
                     .as_str(),
                 "0.1234"
@@ -135,7 +133,7 @@ mod test {
         #[test]
         fn f() {
             assert_eq!(
-                to_str_internal(&FixedDecimalI128P5::new(1234), true, Some(2))
+                to_str_internal::<_, 5>(&FixedDecimalI128::new(1234), true, Some(2))
                     .0
                     .as_str(),
                 "0.01"
@@ -145,7 +143,7 @@ mod test {
         #[test]
         fn g() {
             assert_eq!(
-                to_str_internal(&FixedDecimalI128P0::new(1234), true, Some(2))
+                to_str_internal::<_, 0>(&FixedDecimalI128::new(1234), true, Some(2))
                     .0
                     .as_str(),
                 "1234.00"
@@ -155,7 +153,7 @@ mod test {
         #[test]
         fn h() {
             assert_eq!(
-                to_str_internal(&FixedDecimalI128P5::new(1), true, Some(2))
+                to_str_internal::<_, 5>(&FixedDecimalI128::new(1), true, Some(2))
                     .0
                     .as_str(),
                 "0.00"
@@ -169,22 +167,22 @@ mod test {
         #[test]
         fn a() {
             assert_eq!(
-                parse_str_radix_10("1234.56"),
-                Ok(FixedDecimalI128P2::new(123456))
+                parse_str_radix_10::<_, 2>("1234.56"),
+                Ok(FixedDecimalI128::new(123456))
             );
         }
         #[test]
         fn b() {
             assert_eq!(
-                parse_str_radix_10("1234"),
-                Ok(FixedDecimalI128P2::new(123400))
+                parse_str_radix_10::<_, 2>("1234"),
+                Ok(FixedDecimalI128::new(123400))
             );
         }
         #[test]
         fn c() {
             assert_eq!(
-                parse_str_radix_10("1234.567"),
-                Ok(FixedDecimalI128P2::new(123456))
+                parse_str_radix_10::<_, 2>("1234.567"),
+                Ok(FixedDecimalI128::new(123456))
             );
         }
     }
