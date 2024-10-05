@@ -33,7 +33,11 @@ impl Num for i128 {
     type Unsigned = u128;
 
     fn abs(self) -> Self::Unsigned {
-        self.abs() as u128
+        if self == i128::MIN {
+            170_141_183_460_469_231_731_687_303_715_884_105_728
+        } else {
+            self.abs() as u128
+        }
     }
 
     fn is_positive(self) -> bool {

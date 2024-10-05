@@ -28,7 +28,11 @@ pub(crate) fn to_str_internal<T: Num, const SCALE: u8>(
     }
 
     let push_digit = |rep: &mut ArrayString<MAX_STR_BUFFER_SIZE>, i| {
-        let digit = ((value.mantissa().abs() / 10u128.pow(i)) % 10) as u8;
+        let digit = if i >= total_len {
+            0
+        } else {
+            ((value.mantissa().abs() / 10u128.pow(i)) % 10) as u8
+        };
         rep.push(char::from(b'0' + digit));
     };
 
@@ -47,10 +51,10 @@ pub(crate) fn to_str_internal<T: Num, const SCALE: u8>(
             for i in (0u32..SCALE.into()).rev() {
                 push_digit(&mut rep, i);
             }
-            for _ in 0..(prec.saturating_sub(SCALE.into())) {
-                rep.push('0');
-            }
         }
+    }
+    for _ in 0..(prec.saturating_sub(SCALE.into())) {
+        rep.push('0');
     }
 
     (rep, prec_rem)
@@ -79,7 +83,7 @@ pub(crate) fn parse_str_radix_10<T: Num, const SCALE: u8>(
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::FixedDecimalI128;
+    use crate::{FixedDecimalI128, FixedDecimalU128};
     mod to_str_internal {
 
         use super::*;
@@ -157,6 +161,76 @@ mod test {
                     .0
                     .as_str(),
                 "0.00"
+            );
+        }
+
+        #[test]
+        fn i() {
+            assert_eq!(
+                to_str_internal::<_, { u8::MAX }>(&FixedDecimalI128::new(1), true, None)
+                    .0
+                    .as_str(),
+                "0.000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001"
+            );
+        }
+        #[test]
+        fn k() {
+            assert_eq!(
+                to_str_internal::<_, { u8::MAX }>(&FixedDecimalI128::new(i128::MAX), true, None)
+                    .0
+                    .as_str(),
+                "0.000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000170141183460469231731687303715884105727"
+            );
+        }
+        #[test]
+        fn j() {
+            assert_eq!(
+                to_str_internal::<_, { u8::MAX }>(&FixedDecimalI128::new(i128::MIN), true, None)
+                    .0
+                    .as_str(),
+                "-0.000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000170141183460469231731687303715884105728"
+            );
+        }
+        #[test]
+        fn l() {
+            assert_eq!(
+                to_str_internal::<_, { u8::MAX }>(&FixedDecimalU128::new(u128::MAX), true, None)
+                    .0
+                    .as_str(),
+                "0.000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000340282366920938463463374607431768211455"
+            );
+        }
+        #[test]
+        fn m() {
+            let (buffer, extra) =
+                to_str_internal::<_, 5>(&FixedDecimalU128::new(1), true, Some(500));
+            assert_eq!(buffer.len() + extra.unwrap(), 502);
+        }
+        #[test]
+        fn n() {
+            assert_eq!(
+                to_str_internal::<_, 0>(&FixedDecimalI128::new(i128::MAX), true, None)
+                    .0
+                    .as_str(),
+                "170141183460469231731687303715884105727"
+            );
+        }
+        #[test]
+        fn o() {
+            assert_eq!(
+                to_str_internal::<_, 0>(&FixedDecimalI128::new(i128::MIN), true, None)
+                    .0
+                    .as_str(),
+                "-170141183460469231731687303715884105728"
+            );
+        }
+        #[test]
+        fn p() {
+            assert_eq!(
+                to_str_internal::<_, 0>(&FixedDecimalU128::new(u128::MAX), true, None)
+                    .0
+                    .as_str(),
+                "340282366920938463463374607431768211455"
             );
         }
     }
