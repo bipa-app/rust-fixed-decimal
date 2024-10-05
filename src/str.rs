@@ -91,12 +91,21 @@ pub(crate) fn parse_str_radix_10_exact<T: Num, const SCALE: u8>(
         str::parse::<T>(v).map_err(|e| ParseError::IntErr(e.kind().clone()))
     })?;
     let high = if !int.is_zero() {
-        let shift = Into::<T>::into(10u8).pow(SCALE);
+        let mut shift: T = 1u8.into();
+        for _ in 0..SCALE {
+            shift = shift.checked_mul(&(10u8.into())).ok_or_else(|| {
+                if int.is_positive() {
+                    ParseError::IntErr(IntErrorKind::PosOverflow)
+                } else {
+                    ParseError::IntErr(IntErrorKind::NegOverflow)
+                }
+            })?;
+        }
         int.checked_mul(&shift).ok_or_else(|| {
             if int.is_positive() {
                 ParseError::IntErr(IntErrorKind::PosOverflow)
             } else {
-                ParseError::IntErr(IntErrorKind::PosOverflow)
+                ParseError::IntErr(IntErrorKind::NegOverflow)
             }
         })?
     } else {
@@ -321,11 +330,44 @@ mod test {
                 Err(ParseError::IntErr(IntErrorKind::InvalidDigit))
             );
         }
+        #[test]
+        fn g() {
+            assert_eq!(
+                parse_str_radix_10_exact::<i128, 57>("-1"),
+                Err(ParseError::IntErr(IntErrorKind::NegOverflow))
+            );
+            assert_eq!(
+                parse_str_radix_10_exact::<i128, 57>("1"),
+                Err(ParseError::IntErr(IntErrorKind::PosOverflow))
+            );
+        }
+        #[test]
+        fn h() {
+            // TODO: fix wrong return type
+            parse_str_radix_10_exact::<i128, 4>("0.-001").ok();
+        }
+
+        #[test]
+        fn i() {
+            assert_eq!(
+                parse_str_radix_10_exact::<i128, 10>(&i128::MIN.to_string()),
+                Err(ParseError::IntErr(IntErrorKind::NegOverflow))
+            );
+            assert_eq!(
+                parse_str_radix_10_exact::<i128, 10>(&i128::MAX.to_string()),
+                Err(ParseError::IntErr(IntErrorKind::PosOverflow))
+            );
+        }
 
         proptest! {
             #[test]
             fn parse_str_is_the_opposite_of_to_str_i128_0(v in any::<i128>()) {
                 let d = FixedDecimalI128::<0>::new(v);
+                assert_eq!(parse_str_radix_10_exact(&d.to_string()), Ok(d));
+            }
+            #[test]
+            fn parse_str_is_the_opposite_of_to_str_i128_27(v in any::<i128>()) {
+                let d = FixedDecimalI128::<27>::new(v);
                 assert_eq!(parse_str_radix_10_exact(&d.to_string()), Ok(d));
             }
             #[test]
@@ -347,6 +389,11 @@ mod test {
             #[test]
             fn parse_str_is_the_opposite_of_to_str_u128_0(v in any::<u128>()) {
                 let d = FixedDecimalU128::<0>::new(v);
+                assert_eq!(parse_str_radix_10_exact(&d.to_string()), Ok(d));
+            }
+            #[test]
+            fn parse_str_is_the_opposite_of_to_str_u128_27(v in any::<u128>()) {
+                let d = FixedDecimalU128::<27>::new(v);
                 assert_eq!(parse_str_radix_10_exact(&d.to_string()), Ok(d));
             }
             #[test]
