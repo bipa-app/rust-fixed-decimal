@@ -59,8 +59,12 @@ pub struct FixedDecimal<T: Num, const SCALE: u8>(T);
 /// where m is an integer such that -2<sup>96</sup> < m < 2<sup>96</sup>, and e is i32.
 pub type FixedDecimalI128<const E: i32> = FixedDecimal<i128, E>;
 
+pub type FixedDecimalI128P0 = FixedDecimal<i128, 0>;
+pub type FixedDecimalI128P1 = FixedDecimal<i128, 1>;
 pub type FixedDecimalI128P2 = FixedDecimal<i128, 2>;
+pub type FixedDecimalI128P3 = FixedDecimal<i128, 3>;
 pub type FixedDecimalI128P4 = FixedDecimal<i128, 4>;
+pub type FixedDecimalI128P5 = FixedDecimal<i128, 5>;
 
 impl<T: Num, const SCALE: u8> FixedDecimal<T, SCALE> {
     /// Returns a `FixedDecimal` with `m` representation and corresponding `E` scale.

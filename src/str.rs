@@ -56,79 +56,87 @@ pub(crate) fn to_str_internal<T: Num, const SCALE: u8>(
     (rep, prec_rem)
 }
 
-#[test]
-fn aaaa() {
-    assert_eq!(
-        to_str_internal(&FixedDecimal::<i128, 0>(1234), true, None)
-            .0
-            .as_str(),
-        "1234"
-    );
-}
-#[test]
-fn bbbbb() {
-    assert_eq!(
-        to_str_internal(&FixedDecimal::<i128, 0>(-1234), true, None)
-            .0
-            .as_str(),
-        "-1234"
-    );
-}
-#[test]
-fn cccccccc() {
-    assert_eq!(
-        to_str_internal(&FixedDecimal::<i128, 1>(1234), true, None)
-            .0
-            .as_str(),
-        "123.4"
-    );
-}
-#[test]
-fn d() {
-    assert_eq!(
-        to_str_internal(&FixedDecimal::<i128, 5>(1234), true, None)
-            .0
-            .as_str(),
-        "0.01234"
-    );
-}
+#[cfg(test)]
+mod test {
+    use super::*;
+    use crate::{FixedDecimalI128P0, FixedDecimalI128P1, FixedDecimalI128P4, FixedDecimalI128P5};
+    mod to_str_internal {
+        use super::*;
+        #[test]
+        fn a() {
+            assert_eq!(
+                to_str_internal(&FixedDecimalI128P0::new(1234), true, None)
+                    .0
+                    .as_str(),
+                "1234"
+            );
+        }
+        #[test]
+        fn b() {
+            assert_eq!(
+                to_str_internal(&FixedDecimalI128P0::new(-1234), true, None)
+                    .0
+                    .as_str(),
+                "-1234"
+            );
+        }
+        #[test]
+        fn c() {
+            assert_eq!(
+                to_str_internal(&FixedDecimalI128P1::new(1234), true, None)
+                    .0
+                    .as_str(),
+                "123.4"
+            );
+        }
+        #[test]
+        fn d() {
+            assert_eq!(
+                to_str_internal(&FixedDecimalI128P5::new(1234), true, None)
+                    .0
+                    .as_str(),
+                "0.01234"
+            );
+        }
 
-#[test]
-fn e() {
-    assert_eq!(
-        to_str_internal(&FixedDecimal::<i128, 4>(1234), true, None)
-            .0
-            .as_str(),
-        "0.1234"
-    );
-}
+        #[test]
+        fn e() {
+            assert_eq!(
+                to_str_internal(&FixedDecimalI128P4::new(1234), true, None)
+                    .0
+                    .as_str(),
+                "0.1234"
+            );
+        }
 
-#[test]
-fn f() {
-    assert_eq!(
-        to_str_internal(&FixedDecimal::<i128, 5>(1234), true, Some(2))
-            .0
-            .as_str(),
-        "0.01"
-    );
-}
+        #[test]
+        fn f() {
+            assert_eq!(
+                to_str_internal(&FixedDecimalI128P5::new(1234), true, Some(2))
+                    .0
+                    .as_str(),
+                "0.01"
+            );
+        }
 
-#[test]
-fn g() {
-    assert_eq!(
-        to_str_internal(&FixedDecimal::<i128, 0>(1234), true, Some(2))
-            .0
-            .as_str(),
-        "1234.00"
-    );
-}
+        #[test]
+        fn g() {
+            assert_eq!(
+                to_str_internal(&FixedDecimalI128P0::new(1234), true, Some(2))
+                    .0
+                    .as_str(),
+                "1234.00"
+            );
+        }
 
-#[test]
-fn h() {
-    assert_eq!(
-        to_str_internal(&FixedDecimal::<i128, 5>(1), true, Some(2))
-            .0
-            .as_str(),
-        "0.00"
-    );
+        #[test]
+        fn h() {
+            assert_eq!(
+                to_str_internal(&FixedDecimalI128P5::new(1), true, Some(2))
+                    .0
+                    .as_str(),
+                "0.00"
+            );
+        }
+    }
 }
