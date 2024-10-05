@@ -1,7 +1,6 @@
 use core::fmt;
 use std::{ops, str::FromStr};
 
-use crate::error::Error;
 use num_traits::ConstZero;
 
 // TODO: make it private
@@ -10,12 +9,13 @@ pub trait Num:
     + num_traits::Euclid
     + num_traits::Zero
     + num_traits::Pow<u8, Output = Self>
+    + num_traits::CheckedMul
     + From<u8>
     + ops::Sub<Output = Self>
     + num_traits::ConstZero
     + Eq
     + Ord
-    + FromStr
+    + FromStr<Err = std::num::ParseIntError>
     + ops::Mul<Output = Self>
     + fmt::Debug
     + Default
@@ -27,6 +27,7 @@ pub trait Num:
     fn is_negative(self) -> bool {
         !self.is_positive()
     }
+    fn force_neg(self) -> Self;
 }
 
 impl Num for i128 {
@@ -43,6 +44,10 @@ impl Num for i128 {
     fn is_positive(self) -> bool {
         self >= 0
     }
+
+    fn force_neg(self) -> Self {
+        -self
+    }
 }
 impl Num for u128 {
     type Unsigned = Self;
@@ -52,6 +57,10 @@ impl Num for u128 {
     }
     fn is_positive(self) -> bool {
         true
+    }
+
+    fn force_neg(self) -> Self {
+        panic!("cannot neg u128");
     }
 }
 
@@ -134,10 +143,10 @@ impl<T: Num, const E: u8> fmt::Debug for FixedDecimal<T, E> {
 }
 
 impl<T: Num, const E: u8> FromStr for FixedDecimal<T, E> {
-    type Err = Error;
+    type Err = crate::str::ParseError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        crate::str::parse_str_radix_10(s)
+        crate::str::parse_str_radix_10_exact(s)
     }
 }
 

@@ -1,6 +1,9 @@
-use crate::{constants::MAX_STR_BUFFER_SIZE, error::Error, fixed_decimal::Num, FixedDecimal};
+use std::num::IntErrorKind;
+
+use crate::{constants::MAX_STR_BUFFER_SIZE, fixed_decimal::Num, FixedDecimal};
 
 use arrayvec::ArrayString;
+use num_traits::Zero;
 
 // impl that doesn't allocate for serialization purposes.
 pub(crate) fn to_str_internal<T: Num, const SCALE: u8>(
@@ -8,7 +11,11 @@ pub(crate) fn to_str_internal<T: Num, const SCALE: u8>(
     append_sign: bool,
     precision: Option<usize>,
 ) -> (ArrayString<MAX_STR_BUFFER_SIZE>, Option<usize>) {
-    let total_len = value.mantissa().abs().ilog10() + 1; // 4
+    let total_len = if value.is_zero() {
+        1
+    } else {
+        value.mantissa().abs().ilog10() + 1
+    };
     let (prec, prec_rem) = match precision {
         Some(prec) => {
             let max: usize = u8::MAX.into();
@@ -60,30 +67,57 @@ pub(crate) fn to_str_internal<T: Num, const SCALE: u8>(
     (rep, prec_rem)
 }
 
-pub(crate) fn parse_str_radix_10<T: Num, const SCALE: u8>(
+/// Error type for the library.
+#[derive(Clone, Debug, PartialEq)]
+#[non_exhaustive]
+pub enum ParseError {
+    Underflow,
+    IntErr(IntErrorKind),
+}
+pub(crate) fn parse_str_radix_10_exact<T: Num, const SCALE: u8>(
     str: &str,
-) -> Result<FixedDecimal<T, SCALE>, Error> {
+) -> Result<FixedDecimal<T, SCALE>, ParseError> {
+    let is_negative = str.starts_with('-');
     let (int, frac) = str
         .split_once('.')
         .map_or((str, None), |(int, frac)| (int, Some(frac)));
 
-    // TODO: proper handle overflow
+    if frac.is_some_and(|f| f.trim_start_matches('0').len() > SCALE.into()) {
+        return Err(ParseError::Underflow);
+    }
 
-    let int = str::parse::<T>(int).unwrap_or_else(|_| panic!("fail to parse int part"));
-    let frac = frac
-        .map_or(Ok(T::ZERO), |v| {
-            std::str::FromStr::from_str(&v[..std::cmp::min(v.len(), SCALE.into())])
-        })
-        .unwrap_or_else(|_| panic!("fail to parse frac part"));
-    let shift = Into::<T>::into(10u8).pow(SCALE);
+    let int = str::parse::<T>(int).map_err(|e| ParseError::IntErr(e.kind().clone()))?;
+    let frac = frac.map_or(Ok(T::ZERO), |v| {
+        str::parse::<T>(v).map_err(|e| ParseError::IntErr(e.kind().clone()))
+    })?;
+    let high = if !int.is_zero() {
+        let shift = Into::<T>::into(10u8).pow(SCALE);
+        int.checked_mul(&shift).ok_or_else(|| {
+            if int.is_positive() {
+                ParseError::IntErr(IntErrorKind::PosOverflow)
+            } else {
+                ParseError::IntErr(IntErrorKind::PosOverflow)
+            }
+        })?
+    } else {
+        T::ZERO
+    };
 
-    Ok(FixedDecimal::<T, SCALE>::new(int * shift + frac))
+    // TODO: improve gambiarra
+    let frac = if is_negative {
+        frac.force_neg() // This may panic with "-0".parse::<u128>();
+    } else {
+        frac
+    };
+
+    Ok(FixedDecimal::<T, SCALE>::new(high + frac))
 }
 
 #[cfg(test)]
 mod test {
     use super::*;
     use crate::{FixedDecimalI128, FixedDecimalU128};
+    use proptest::prelude::*;
     mod to_str_internal {
 
         use super::*;
@@ -233,6 +267,15 @@ mod test {
                 "340282366920938463463374607431768211455"
             );
         }
+        #[test]
+        fn q() {
+            assert_eq!(
+                to_str_internal::<_, 5>(&FixedDecimalU128::new(0), true, None)
+                    .0
+                    .as_str(),
+                "0.00000"
+            );
+        }
     }
 
     mod parse_str_radix_10 {
@@ -241,23 +284,95 @@ mod test {
         #[test]
         fn a() {
             assert_eq!(
-                parse_str_radix_10::<_, 2>("1234.56"),
+                parse_str_radix_10_exact::<_, 2>("1234.56"),
                 Ok(FixedDecimalI128::new(123456))
             );
         }
         #[test]
         fn b() {
             assert_eq!(
-                parse_str_radix_10::<_, 2>("1234"),
+                parse_str_radix_10_exact::<_, 2>("1234"),
                 Ok(FixedDecimalI128::new(123400))
             );
         }
         #[test]
         fn c() {
             assert_eq!(
-                parse_str_radix_10::<_, 2>("1234.567"),
-                Ok(FixedDecimalI128::new(123456))
+                parse_str_radix_10_exact::<i128, 2>("1234.567"),
+                Err(ParseError::Underflow)
             );
+        }
+        #[test]
+        fn d() {
+            let d = FixedDecimalI128::<57>::new(0);
+            assert_eq!(parse_str_radix_10_exact(&d.to_string()), Ok(d));
+        }
+        #[test]
+        fn e() {
+            assert_eq!(
+                parse_str_radix_10_exact::<i128, 2>(""),
+                Err(ParseError::IntErr(IntErrorKind::Empty))
+            );
+        }
+        #[test]
+        fn f() {
+            assert_eq!(
+                parse_str_radix_10_exact::<u128, 3>("-0.001"),
+                Err(ParseError::IntErr(IntErrorKind::InvalidDigit))
+            );
+        }
+
+        proptest! {
+            #[test]
+            fn parse_str_is_the_opposite_of_to_str_i128_0(v in any::<i128>()) {
+                let d = FixedDecimalI128::<0>::new(v);
+                assert_eq!(parse_str_radix_10_exact(&d.to_string()), Ok(d));
+            }
+            #[test]
+            fn parse_str_is_the_opposite_of_to_str_i128_57(v in any::<i128>()) {
+                let d = FixedDecimalI128::<57>::new(v);
+                assert_eq!(parse_str_radix_10_exact(&d.to_string()), Ok(d));
+            }
+            #[test]
+            fn parse_str_is_the_opposite_of_to_str_i128_173(v in any::<i128>()) {
+                let d = FixedDecimalI128::<173>::new(v);
+                assert_eq!(parse_str_radix_10_exact(&d.to_string()), Ok(d));
+            }
+            #[test]
+            fn parse_str_is_the_opposite_of_to_str_i128_255(v in any::<i128>()) {
+                let d = FixedDecimalI128::<{u8::MAX}>::new(v);
+                assert_eq!(parse_str_radix_10_exact(&d.to_string()), Ok(d));
+            }
+
+            #[test]
+            fn parse_str_is_the_opposite_of_to_str_u128_0(v in any::<u128>()) {
+                let d = FixedDecimalU128::<0>::new(v);
+                assert_eq!(parse_str_radix_10_exact(&d.to_string()), Ok(d));
+            }
+            #[test]
+            fn parse_str_is_the_opposite_of_to_str_u128_57(v in any::<u128>()) {
+                let d = FixedDecimalU128::<57>::new(v);
+                assert_eq!(parse_str_radix_10_exact(&d.to_string()), Ok(d));
+            }
+            #[test]
+            fn parse_str_is_the_opposite_of_to_str_u128_173(v in any::<u128>()) {
+                let d = FixedDecimalU128::<173>::new(v);
+                assert_eq!(parse_str_radix_10_exact(&d.to_string()), Ok(d));
+            }
+            #[test]
+            fn parse_str_is_the_opposite_of_to_str_u128_255(v in any::<u128>()) {
+                let d = FixedDecimalU128::<{u8::MAX}>::new(v);
+                assert_eq!(parse_str_radix_10_exact(&d.to_string()), Ok(d));
+            }
+
+            #[test]
+            fn should_never_panic_i128_7(v in r"-?[0-9]{1,}\.[0-9]{1,}") {
+                parse_str_radix_10_exact::<i128, 7>(&v).ok();
+            }
+            #[test]
+            fn should_never_panic_u128_7(v in r"-?[0-9]{1,}\.[0-9]{1,}") {
+                parse_str_radix_10_exact::<u128, 7>(&v).ok();
+            }
         }
     }
 }
