@@ -65,7 +65,7 @@ impl Num for u128 {
 }
 
 #[derive(Clone, Copy, Eq, PartialEq, PartialOrd, Ord)]
-pub struct FixedDecimal<T: Num, const SCALE: u8>(T);
+pub struct FixedDecimal<T: Num, const SCALE: u8>(pub(crate) T);
 
 impl<T: Num, const SCALE: u8> FixedDecimal<T, SCALE> {
     /// Returns a `FixedDecimal` with `m` representation and corresponding `E` scale.
@@ -112,16 +112,6 @@ impl<T: Num, const SCALE: u8> FixedDecimal<T, SCALE> {
     pub(crate) const fn mantissa(&self) -> T {
         self.0
     }
-
-    #[must_use]
-    pub(crate) fn is_positive(&self) -> bool {
-        self.0.is_positive()
-    }
-
-    #[must_use]
-    pub(crate) fn is_negative(&self) -> bool {
-        self.0.is_negative()
-    }
 }
 
 impl<T: Num, const E: u8> fmt::Display for FixedDecimal<T, E> {
@@ -129,9 +119,9 @@ impl<T: Num, const E: u8> fmt::Display for FixedDecimal<T, E> {
         let (rep, additional) = crate::str::to_str_internal(self, false, f.precision());
         if let Some(additional) = additional {
             let value = [rep.as_str(), "0".repeat(additional).as_str()].concat();
-            f.pad_integral(self.is_positive(), "", value.as_str())
+            f.pad_integral(self.0.is_positive(), "", value.as_str())
         } else {
-            f.pad_integral(self.is_positive(), "", rep.as_str())
+            f.pad_integral(self.0.is_positive(), "", rep.as_str())
         }
     }
 }

@@ -30,7 +30,7 @@ pub(crate) fn to_str_internal<T: Num, const SCALE: u8>(
 
     let mut rep = ArrayString::<MAX_STR_BUFFER_SIZE>::new();
 
-    if append_sign && value.is_negative() {
+    if append_sign && value.0.is_negative() {
         rep.push('-');
     }
 
