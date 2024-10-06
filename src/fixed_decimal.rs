@@ -225,6 +225,13 @@ impl<T: Num, const E: u8> ops::Div for FixedDecimal<T, E> {
     }
 }
 
+impl<const E: u8> num_traits::ConstOne for FixedDecimal<i128, E> {
+    const ONE: Self = Self(10_i128.pow(E as u32));
+}
+impl<const E: u8> num_traits::ConstOne for FixedDecimal<u128, E> {
+    const ONE: Self = Self(10_u128.pow(E as u32));
+}
+
 impl<T: Num, const E: u8> num_traits::One for FixedDecimal<T, E> {
     fn one() -> Self {
         Self(Into::<T>::into(10u8).pow(E))

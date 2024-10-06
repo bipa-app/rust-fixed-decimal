@@ -1,5 +1,5 @@
 // Most of test case are based on rust_decimal test cases
-use num_traits::Signed;
+use num_traits::{ConstOne, Signed};
 use proptest::prelude::*;
 use std::str::FromStr;
 
@@ -12,6 +12,18 @@ fn it_consts_bounds() {
     assert_eq!(FixedDecimal::<i128, 0>::MIN.mantissa(), i128::MIN);
     assert_eq!(FixedDecimal::<u128, 0>::MAX.mantissa(), u128::MAX);
     assert_eq!(FixedDecimal::<u128, 0>::MIN.mantissa(), u128::MIN);
+}
+
+#[test]
+fn it_consts_one() {
+    assert_eq!(
+        FixedDecimalI128::<0>::ONE,
+        FixedDecimalI128::<0>::from_str("1").unwrap()
+    );
+    assert_eq!(
+        FixedDecimalI128::<7>::ONE,
+        FixedDecimalI128::<7>::from_str("1").unwrap()
+    );
 }
 
 // Formatting

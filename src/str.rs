@@ -63,7 +63,6 @@ pub(crate) fn to_str_internal<T: Num, const SCALE: u8>(
 
 // TODO: add inner types
 #[derive(Clone, Debug, PartialEq)]
-#[non_exhaustive]
 pub struct ParseError;
 
 pub(crate) fn parse_str_radix_10_exact<T: Num, const SCALE: u8>(
