@@ -1,8 +1,18 @@
 // Most of test case are based on rust_decimal test cases
+use num_traits::Signed;
 use proptest::prelude::*;
 use std::str::FromStr;
 
-use rust_fixed_decimal::{FixedDecimalI128, FixedDecimalU128};
+use rust_fixed_decimal::{FixedDecimal, FixedDecimalI128, FixedDecimalU128};
+
+// Consts
+#[test]
+fn it_consts_bounds() {
+    assert_eq!(FixedDecimal::<i128, 0>::MAX.mantissa(), i128::MAX);
+    assert_eq!(FixedDecimal::<i128, 0>::MIN.mantissa(), i128::MIN);
+    assert_eq!(FixedDecimal::<u128, 0>::MAX.mantissa(), u128::MAX);
+    assert_eq!(FixedDecimal::<u128, 0>::MIN.mantissa(), u128::MIN);
+}
 
 // Formatting
 
@@ -107,32 +117,193 @@ proptest! {
     #[test]
     #[ignore]
     fn formats_never_panic_i128(v in any::<i128>()) {
-        let _ = format!("{}", FixedDecimalI128::<0>::new(v));
-        let _ = format!("{}", FixedDecimalI128::<7>::new(v));
-        let _ = format!("{}", FixedDecimalI128::<13>::new(v));
-        let _ = format!("{}", FixedDecimalI128::<21>::new(v));
-        let _ = format!("{}", FixedDecimalI128::<32>::new(v));
-        let _ = format!("{}", FixedDecimalI128::<41>::new(v));
-        let _ = format!("{}", FixedDecimalI128::<57>::new(v));
-        let _ = format!("{}", FixedDecimalI128::<100>::new(v));
-        let _ = format!("{}", FixedDecimalI128::<150>::new(v));
-        let _ = format!("{}", FixedDecimalI128::<200>::new(v));
-        let _ = format!("{}", FixedDecimalI128::<{u8::MAX}>::new(v));
+        FixedDecimalI128::<0>::new(v).to_string();
+        FixedDecimalI128::<7>::new(v).to_string();
+        FixedDecimalI128::<13>::new(v).to_string();
+        FixedDecimalI128::<21>::new(v).to_string();
+        FixedDecimalI128::<32>::new(v).to_string();
+        FixedDecimalI128::<41>::new(v).to_string();
+        FixedDecimalI128::<57>::new(v).to_string();
+        FixedDecimalI128::<100>::new(v).to_string();
+        FixedDecimalI128::<150>::new(v).to_string();
+        FixedDecimalI128::<200>::new(v).to_string();
+        FixedDecimalI128::<{u8::MAX}>::new(v).to_string();
     }
 
     #[test]
     #[ignore]
     fn formats_never_panic_u128(v in any::<u128>()) {
-        let _ = format!("{}", FixedDecimalU128::<0>::new(v));
-        let _ = format!("{}", FixedDecimalU128::<7>::new(v));
-        let _ = format!("{}", FixedDecimalU128::<13>::new(v));
-        let _ = format!("{}", FixedDecimalU128::<21>::new(v));
-        let _ = format!("{}", FixedDecimalU128::<32>::new(v));
-        let _ = format!("{}", FixedDecimalU128::<41>::new(v));
-        let _ = format!("{}", FixedDecimalU128::<57>::new(v));
-        let _ = format!("{}", FixedDecimalU128::<100>::new(v));
-        let _ = format!("{}", FixedDecimalU128::<150>::new(v));
-        let _ = format!("{}", FixedDecimalU128::<200>::new(v));
-        let _ = format!("{}", FixedDecimalU128::<{u8::MAX}>::new(v));
+        FixedDecimalU128::<0>::new(v).to_string();
+        FixedDecimalU128::<7>::new(v).to_string();
+        FixedDecimalU128::<13>::new(v).to_string();
+        FixedDecimalU128::<21>::new(v).to_string();
+        FixedDecimalU128::<32>::new(v).to_string();
+        FixedDecimalU128::<41>::new(v).to_string();
+        FixedDecimalU128::<57>::new(v).to_string();
+        FixedDecimalU128::<100>::new(v).to_string();
+        FixedDecimalU128::<150>::new(v).to_string();
+        FixedDecimalU128::<200>::new(v).to_string();
+        FixedDecimalU128::<{u8::MAX}>::new(v).to_string();
+    }
+}
+
+// Parsing
+
+#[test]
+fn it_parses_empty_string() {
+    assert!(FixedDecimalI128::<3>::from_str("").is_err());
+    assert!(FixedDecimalI128::<3>::from_str(" ").is_err());
+}
+
+#[test]
+fn it_parses_positive_int_string() {
+    let a = FixedDecimalI128::<0>::from_str("233").unwrap();
+    assert!(a.is_positive());
+    assert_eq!(233, a.mantissa());
+    assert_eq!("233", a.to_string());
+}
+
+#[test]
+fn it_parses_negative_int_string() {
+    let a = FixedDecimalI128::<0>::from_str("-233").unwrap();
+    assert!(a.is_negative());
+    assert_eq!(-233, a.mantissa());
+    assert_eq!("-233", a.to_string());
+}
+
+#[test]
+fn it_parses_positive_float_string() {
+    let a = FixedDecimalI128::<6>::from_str("233.323223").unwrap();
+    assert!(a.is_positive());
+    assert_eq!(233323223, a.mantissa());
+    assert_eq!("233.323223", a.to_string());
+}
+
+#[test]
+fn it_parses_negative_float_string() {
+    let a = FixedDecimalI128::<5>::from_str("-233.32322").unwrap();
+    assert!(a.is_negative());
+    assert_eq!(-23332322, a.mantissa());
+    assert_eq!("-233.32322", a.to_string());
+}
+
+#[test]
+fn it_parses_positive_tiny_float_string() {
+    let a = FixedDecimalI128::<6>::from_str(".000001").unwrap();
+    assert!(a.is_positive());
+    assert_eq!(1, a.mantissa());
+    assert_eq!("0.000001", a.to_string());
+}
+
+#[test]
+fn it_parses_negative_tiny_float_string() {
+    let a = FixedDecimalI128::<6>::from_str("-0.000001").unwrap();
+    assert!(a.is_negative());
+    assert_eq!(-1, a.mantissa());
+    assert_eq!("-0.000001", a.to_string());
+}
+
+#[test]
+fn it_parses_big_integer_string() {
+    let a = FixedDecimalI128::<0>::from_str("170141183460469231731687303715884105727").unwrap();
+    assert_eq!(FixedDecimalI128::<0>::MAX, a);
+    assert_eq!(i128::MAX.to_string(), a.to_string());
+
+    let a = FixedDecimalI128::<0>::from_str("-170141183460469231731687303715884105728").unwrap();
+    assert_eq!(FixedDecimalI128::<0>::MIN, a);
+    assert_eq!(i128::MIN.to_string(), a.to_string());
+}
+
+#[test]
+fn it_parses_big_float_string() {
+    let a = FixedDecimalI128::<37>::from_str("17.0141183460469231731687303715884105727").unwrap();
+    assert_eq!("17.0141183460469231731687303715884105727", a.to_string());
+}
+
+#[test]
+fn it_parses_big_scale() {
+    let s = "0.000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001";
+    let a = FixedDecimalI128::<{ u8::MAX }>::from_str(s).expect("1");
+    assert_eq!(s, a.to_string());
+
+    let s = "0.000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000170141183460469231731687303715884105727";
+    let a = FixedDecimalI128::<{ u8::MAX }>::from_str(s).expect("i128::MAX");
+    assert_eq!(s, a.to_string());
+
+    // TODO:
+    // let s = "-0.000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000170141183460469231731687303715884105728";
+    // let a = FixedDecimalI128::<{ u8::MAX }>::from_str(s).expect("i128::MIN");
+    // assert_eq!(s, a.to_string());
+
+    let s = "0.000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000340282366920938463463374607431768211455";
+    let a = FixedDecimalU128::<{ u8::MAX }>::from_str(s).expect("u128::MAX");
+    assert_eq!(s, a.to_string());
+}
+
+proptest! {
+    #[test]
+    #[ignore]
+    fn formats_and_parses_give_same_result_i128(v in any::<i128>()) {
+        let d = FixedDecimalI128::<0>::new(v);
+        assert_eq!(d.to_string().parse(), Ok(d));
+
+        let d = FixedDecimalI128::<27>::new(v);
+        assert_eq!(d.to_string().parse(), Ok(d));
+
+        let d = FixedDecimalI128::<57>::new(v);
+        assert_eq!(d.to_string().parse(), Ok(d));
+
+        let d = FixedDecimalI128::<173>::new(v);
+        assert_eq!(d.to_string().parse(), Ok(d));
+
+        let d = FixedDecimalI128::<{u8::MAX}>::new(v);
+        assert_eq!(d.to_string().parse(), Ok(d));
+    }
+
+    #[test]
+    #[ignore]
+    fn formats_and_parses_give_same_result_u128(v in any::<u128>()) {
+        let d = FixedDecimalU128::<0>::new(v);
+        assert_eq!(d.to_string().parse(), Ok(d));
+
+        let d = FixedDecimalU128::<27>::new(v);
+        assert_eq!(d.to_string().parse(), Ok(d));
+
+        let d = FixedDecimalU128::<57>::new(v);
+        assert_eq!(d.to_string().parse(), Ok(d));
+
+        let d = FixedDecimalU128::<173>::new(v);
+        assert_eq!(d.to_string().parse(), Ok(d));
+
+        let d = FixedDecimalU128::<{u8::MAX}>::new(v);
+        assert_eq!(d.to_string().parse(), Ok(d));
+    }
+
+    #[test]
+    #[ignore]
+    fn parses_never_panic_i128(v in r"-?[0-9]{1,200}\.[0-9]{1,200}") {
+        let _ = FixedDecimalI128::<0>::from_str(&v);
+        let _ = FixedDecimalI128::<7>::from_str(&v);
+        let _ = FixedDecimalI128::<13>::from_str(&v);
+        let _ = FixedDecimalI128::<21>::from_str(&v);
+        let _ = FixedDecimalI128::<32>::from_str(&v);
+        let _ = FixedDecimalI128::<41>::from_str(&v);
+        let _ = FixedDecimalI128::<57>::from_str(&v);
+        let _ = FixedDecimalI128::<100>::from_str(&v);
+        let _ = FixedDecimalI128::<150>::from_str(&v);
+        let _ = FixedDecimalI128::<200>::from_str(&v);
+        let _ = FixedDecimalI128::<{u8::MAX}>::from_str(&v);
+
+        let _ = FixedDecimalU128::<0>::from_str(&v);
+        let _ = FixedDecimalU128::<7>::from_str(&v);
+        let _ = FixedDecimalU128::<13>::from_str(&v);
+        let _ = FixedDecimalU128::<21>::from_str(&v);
+        let _ = FixedDecimalU128::<32>::from_str(&v);
+        let _ = FixedDecimalU128::<41>::from_str(&v);
+        let _ = FixedDecimalU128::<57>::from_str(&v);
+        let _ = FixedDecimalU128::<100>::from_str(&v);
+        let _ = FixedDecimalU128::<150>::from_str(&v);
+        let _ = FixedDecimalU128::<200>::from_str(&v);
+        let _ = FixedDecimalU128::<{u8::MAX}>::from_str(&v);
     }
 }
