@@ -6,4 +6,6 @@ edition = "2021"
 [dependencies]
 arrayvec = "0.7.6"
 num-traits = { version = "0.2.19", features = ["i128"] }
-proptest = { version = "1.5.0", features = ["proptest-macro"] }
+
+[dev-dependencies]
+proptest = { version = "1.5.0" }
