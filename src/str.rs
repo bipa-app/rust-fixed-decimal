@@ -1,5 +1,3 @@
-use std::num::IntErrorKind;
-
 use crate::{constants::MAX_STR_BUFFER_SIZE, fixed_decimal::Num, FixedDecimal};
 
 use arrayvec::ArrayString;
@@ -63,13 +61,11 @@ pub(crate) fn to_str_internal<T: Num, const SCALE: u8>(
     (rep, prec_rem)
 }
 
-/// Error type for the library.
+// TODO: add inner types
 #[derive(Clone, Debug, PartialEq)]
 #[non_exhaustive]
-pub enum ParseError {
-    Underflow,
-    IntErr(IntErrorKind),
-}
+pub struct ParseError;
+
 pub(crate) fn parse_str_radix_10_exact<T: Num, const SCALE: u8>(
     str: &str,
 ) -> Result<FixedDecimal<T, SCALE>, ParseError> {
@@ -79,35 +75,23 @@ pub(crate) fn parse_str_radix_10_exact<T: Num, const SCALE: u8>(
         .map_or((str, None), |(int, frac)| (int, Some(frac)));
 
     if frac.is_some_and(|f| f.trim_start_matches('0').len() > SCALE.into()) {
-        return Err(ParseError::Underflow);
+        return Err(ParseError);
     }
 
     let int = if int.is_empty() && !str.is_empty() {
         0u8.into()
     } else {
-        str::parse::<T>(int).map_err(|e| ParseError::IntErr(e.kind().clone()))?
+        str::parse::<T>(int).map_err(|_| ParseError)?
     };
-    let frac = frac.map_or(Ok(T::ZERO), |v| {
-        str::parse::<T>(v).map_err(|e| ParseError::IntErr(e.kind().clone()))
-    })?;
+    let frac = frac.map_or(Ok(T::ZERO), |v| str::parse::<T>(v).map_err(|_| ParseError))?;
     let high = if !int.is_zero() {
         let mut shift: T = 1u8.into();
         for _ in 0..SCALE {
-            shift = shift.checked_mul(&(10u8.into())).ok_or_else(|| {
-                if int.internal_is_positive() {
-                    ParseError::IntErr(IntErrorKind::PosOverflow)
-                } else {
-                    ParseError::IntErr(IntErrorKind::NegOverflow)
-                }
-            })?;
+            shift = shift
+                .checked_mul(&(10u8.into()))
+                .ok_or_else(|| ParseError)?;
         }
-        int.checked_mul(&shift).ok_or_else(|| {
-            if int.internal_is_positive() {
-                ParseError::IntErr(IntErrorKind::PosOverflow)
-            } else {
-                ParseError::IntErr(IntErrorKind::NegOverflow)
-            }
-        })?
+        int.checked_mul(&shift).ok_or_else(|| ParseError)?
     } else {
         T::ZERO
     };
