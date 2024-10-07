@@ -374,3 +374,28 @@ proptest! {
         assert_eq!(FixedDecimalI128::<7>::new(a).checked_add(&FixedDecimalI128::<7>::new(b)), a.checked_add(b).map(FixedDecimalI128::<7>::new))
     }
 }
+
+// Serde
+#[cfg(feature = "serde")]
+mod _serde {
+    use super::*;
+    use serde_json::json;
+
+    #[test]
+    fn it_can_deserilize_str() {
+        #[derive(serde::Deserialize, PartialEq, Debug)]
+        struct A {
+            value: FixedDecimalI128<2>,
+        }
+
+        let json = json!({
+            "value": "123.45"
+        });
+        assert_eq!(
+            A {
+                value: FixedDecimalI128::<2>::from_str("123.45").unwrap()
+            },
+            serde_json::from_value(json).unwrap()
+        )
+    }
+}
