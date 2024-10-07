@@ -1,5 +1,5 @@
 // Most of test case are based on rust_decimal test cases
-use num_traits::{ConstOne, Signed};
+use num_traits::{CheckedAdd, ConstOne, Signed};
 use proptest::prelude::*;
 use std::str::FromStr;
 
@@ -18,11 +18,11 @@ fn it_consts_bounds() {
 fn it_consts_one() {
     assert_eq!(
         FixedDecimalI128::<0>::ONE,
-        FixedDecimalI128::<0>::from_str("1").unwrap()
+        FixedDecimalI128::from_str("1").unwrap()
     );
     assert_eq!(
         FixedDecimalI128::<7>::ONE,
-        FixedDecimalI128::<7>::from_str("1").unwrap()
+        FixedDecimalI128::from_str("1").unwrap()
     );
 }
 
@@ -39,6 +39,7 @@ fn it_formats() {
     assert_eq!(format!("{a:0<10.2}"), "233.320000");
     assert_eq!(format!("{a:+}"), "+233.323223");
     assert_eq!(format!("{a:.300}"), "233.323223000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000");
+    assert_eq!(format!("{a:?}"), "233.323223");
 }
 #[test]
 fn it_formats_neg() {
@@ -127,7 +128,6 @@ fn it_formats_big_int() {
 
 proptest! {
     #[test]
-    #[ignore]
     fn formats_never_panic_i128(v in any::<i128>()) {
         FixedDecimalI128::<0>::new(v).to_string();
         FixedDecimalI128::<7>::new(v).to_string();
@@ -143,7 +143,6 @@ proptest! {
     }
 
     #[test]
-    #[ignore]
     fn formats_never_panic_u128(v in any::<u128>()) {
         FixedDecimalU128::<0>::new(v).to_string();
         FixedDecimalU128::<7>::new(v).to_string();
@@ -254,7 +253,6 @@ fn it_parses_big_scale() {
 
 proptest! {
     #[test]
-    #[ignore]
     fn formats_and_parses_give_same_result_i128(v in any::<i128>()) {
         let d = FixedDecimalI128::<0>::new(v);
         assert_eq!(d.to_string().parse(), Ok(d));
@@ -273,7 +271,6 @@ proptest! {
     }
 
     #[test]
-    #[ignore]
     fn formats_and_parses_give_same_result_u128(v in any::<u128>()) {
         let d = FixedDecimalU128::<0>::new(v);
         assert_eq!(d.to_string().parse(), Ok(d));
@@ -292,7 +289,6 @@ proptest! {
     }
 
     #[test]
-    #[ignore]
     fn parses_never_panic_i128(v in r"-?[0-9]{1,200}\.[0-9]{1,200}") {
         let _ = FixedDecimalI128::<0>::from_str(&v);
         let _ = FixedDecimalI128::<7>::from_str(&v);
@@ -317,5 +313,64 @@ proptest! {
         let _ = FixedDecimalU128::<150>::from_str(&v);
         let _ = FixedDecimalU128::<200>::from_str(&v);
         let _ = FixedDecimalU128::<{u8::MAX}>::from_str(&v);
+    }
+
+}
+// Negation
+#[test]
+fn it_negates_decimals() {
+    let a = FixedDecimalI128::<8>::from_str("11.81512605").unwrap();
+    let b = FixedDecimalI128::<8>::from_str("-11.81512605").unwrap();
+
+    assert_eq!(-a, b);
+    assert_eq!(-b, a);
+}
+
+proptest! {
+    #[test]
+    fn negates_works_as_internal(v in any::<i128>()) {
+        assert_eq!(-FixedDecimalI128::<7>::new(v), FixedDecimalI128::<7>::new(-v));
+    }
+}
+
+// Addition
+
+#[test]
+fn it_can_add_simple() {
+    // This is the most basic test for addition, intended largely for micro-optimization.
+    let two = FixedDecimalI128::<2>::ONE + FixedDecimalI128::<2>::ONE;
+    assert_eq!(two, FixedDecimalI128::<2>::new(200));
+}
+
+#[test]
+fn it_can_addassign() {
+    let mut a = FixedDecimalI128::<2>::from_str("1.01").unwrap();
+    let b = FixedDecimalI128::<2>::from_str("0.99").unwrap();
+    a += b;
+    assert_eq!("2.00", a.to_string());
+
+    a += &b;
+    assert_eq!("2.99", a.to_string());
+
+    let mut c = &mut a;
+    c += b;
+    assert_eq!("3.98", a.to_string());
+
+    let mut c = &mut a;
+    c += &b;
+    assert_eq!("4.97", a.to_string());
+}
+
+proptest! {
+    #[test]
+    fn adds_works_as_internal(a in any::<i128>(), b in any::<i128>()) {
+        if a.checked_add(b).is_some() {
+            assert_eq!(FixedDecimalI128::<7>::new(a) + FixedDecimalI128::<7>::new(b), FixedDecimalI128::<7>::new(a + b))
+        }
+    }
+
+    #[test]
+    fn checked_adds_works_as_internal(a in any::<i128>(), b in any::<i128>()) {
+        assert_eq!(FixedDecimalI128::<7>::new(a).checked_add(&FixedDecimalI128::<7>::new(b)), a.checked_add(b).map(FixedDecimalI128::<7>::new))
     }
 }

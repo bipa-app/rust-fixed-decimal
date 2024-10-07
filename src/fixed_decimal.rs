@@ -1,8 +1,5 @@
 use core::fmt;
-use std::{
-    ops::{self},
-    str::FromStr,
-};
+use std::{ops, str::FromStr};
 
 use num_traits::ConstZero;
 
@@ -14,11 +11,13 @@ pub trait Num:
     + num_traits::Pow<u8, Output = Self>
     + num_traits::CheckedMul
     + num_traits::Num
+    + num_traits::CheckedAdd
     + From<u8>
     + ops::Sub<Output = Self>
     + ops::Mul<Output = Self>
     + ops::Rem<Output = Self>
     + ops::Div<Output = Self>
+    + ops::AddAssign
     + num_traits::ConstZero
     + Eq
     + Ord
@@ -170,6 +169,36 @@ impl<T: Num, const E: u8> ops::Add for FixedDecimal<T, E> {
 
     fn add(self, rhs: Self) -> Self::Output {
         Self(self.0.add(rhs.0))
+    }
+}
+
+impl<T: Num, const E: u8> ops::AddAssign<FixedDecimal<T, E>> for FixedDecimal<T, E> {
+    fn add_assign(&mut self, rhs: Self) {
+        self.0.add_assign(rhs.0)
+    }
+}
+impl<'a, T: Num, const E: u8> ops::AddAssign<&'a FixedDecimal<T, E>> for FixedDecimal<T, E> {
+    fn add_assign(&mut self, rhs: &'a Self) {
+        Self::add_assign(self, *rhs)
+    }
+}
+impl<'a, T: Num, const E: u8> ops::AddAssign<FixedDecimal<T, E>> for &'a mut FixedDecimal<T, E> {
+    fn add_assign(&mut self, rhs: FixedDecimal<T, E>) {
+        self.0.add_assign(rhs.0)
+    }
+}
+
+impl<'a, T: Num, const E: u8> ops::AddAssign<&'a FixedDecimal<T, E>>
+    for &'a mut FixedDecimal<T, E>
+{
+    fn add_assign(&mut self, rhs: &'a FixedDecimal<T, E>) {
+        self.0.add_assign(rhs.0)
+    }
+}
+
+impl<T: Num, const E: u8> num_traits::CheckedAdd for FixedDecimal<T, E> {
+    fn checked_add(&self, v: &Self) -> Option<Self> {
+        self.0.checked_add(&v.0).map(Self)
     }
 }
 
