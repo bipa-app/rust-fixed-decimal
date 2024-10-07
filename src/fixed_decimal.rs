@@ -107,7 +107,7 @@ where
     <<T as ext_num_traits::ExtSigned>::Unsigned as TryInto<u8>>::Error: std::fmt::Debug,
 {
     fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
-        let (rep, additional) = crate::str::to_str_internal(self, false, f.precision());
+        let (rep, additional) = crate::str::to_str_internal(self, f.precision());
         if let Some(additional) = additional {
             let value = [rep.as_str(), "0".repeat(additional).as_str()].concat();
             f.pad_integral(self.0.is_positive(), "", value.as_str())

@@ -12,11 +12,10 @@ use num_traits::Pow;
 // impl that doesn't allocate for serialization purposes.
 pub(crate) fn to_str_internal<T, const SCALE: u8>(
     value: &FixedDecimal<T, SCALE>,
-    append_sign: bool,
     precision: Option<usize>,
 ) -> (ArrayString<MAX_STR_BUFFER_SIZE>, Option<usize>)
 where
-    T: ext_num_traits::UAbs + num_traits::Zero + ext_num_traits::Sign + Copy,
+    T: ext_num_traits::UAbs + num_traits::Zero + Copy,
     <T as ext_num_traits::ExtSigned>::Unsigned: ext_num_traits::ILog10
         + ext_num_traits::Ten
         + TryInto<u8>
@@ -46,9 +45,10 @@ where
 
     let mut rep = ArrayString::<MAX_STR_BUFFER_SIZE>::new();
 
-    if append_sign && !value.0.is_positive() {
-        rep.push('-');
-    }
+    // fmt::Display print sign before call this function to apply padding
+    // if !value.0.is_positive() {
+    //     rep.push('-');
+    // }
 
     let push_digit = |rep: &mut ArrayString<MAX_STR_BUFFER_SIZE>, i: u8| {
         let digit: u8 = if i >= total_len {
