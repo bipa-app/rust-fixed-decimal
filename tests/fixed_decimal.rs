@@ -251,6 +251,14 @@ fn it_parses_big_scale() {
     assert_eq!(s, a.to_string());
 }
 
+#[test]
+fn it_parses_positive_int_string_with_extra_right_zeros() {
+    let a = FixedDecimalI128::<3>::from_str("98.1").unwrap();
+    // assert!(a.is_positive());
+    assert_eq!(98100, a.mantissa());
+    assert_eq!("98.100", a.to_string());
+}
+
 proptest! {
     #[test]
     fn formats_and_parses_give_same_result_i128(v in any::<i128>()) {
@@ -388,14 +396,42 @@ mod _serde {
             value: FixedDecimalI128<2>,
         }
 
-        let json = json!({
-            "value": "123.45"
-        });
         assert_eq!(
             A {
                 value: FixedDecimalI128::<2>::from_str("123.45").unwrap()
             },
-            serde_json::from_value(json).unwrap()
-        )
+            serde_json::from_value(json!({
+                "value": "123.45"
+            }))
+            .unwrap()
+        );
+
+        assert_eq!(
+            A {
+                value: FixedDecimalI128::<2>::from_str("123.40").unwrap()
+            },
+            serde_json::from_value(json!({
+                "value": "123.4"
+            }))
+            .unwrap()
+        );
+    }
+
+    #[test]
+    fn it_cant_if_is_invalid() {
+        #[derive(serde::Deserialize, PartialEq, Debug)]
+        struct A {
+            value: FixedDecimalI128<2>,
+        }
+
+        assert!(serde_json::from_value::<A>(json!({
+            "value": "123.459"
+        }))
+        .is_err());
+
+        assert!(serde_json::from_value::<A>(json!({
+            "value": "a lot"
+        }))
+        .is_err());
     }
 }

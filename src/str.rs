@@ -184,14 +184,11 @@ where
         }
     }
     for _ in 0..SCALE {
-        match digits.next() {
-            None => return pack(acc),
-            Some(c) => {
-                acc = acc.checked_mul(&T::TEN).ok_or_else(overflow_err)?;
-                acc = acc
-                    .checked_add(&(sign_carry * digit_to_int(&c)?.into()))
-                    .ok_or_else(overflow_err)?;
-            }
+        acc = acc.checked_mul(&T::TEN).ok_or_else(overflow_err)?;
+        if let Some(c) = digits.next() {
+            acc = acc
+                .checked_add(&(sign_carry * digit_to_int(&c)?.into()))
+                .ok_or_else(overflow_err)?;
         }
     }
 
