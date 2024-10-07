@@ -234,32 +234,16 @@ impl<T: ops::Mul<Output = T>, const E: u8> ops::Mul for FixedDecimal<T, E> {
     }
 }
 
-impl<T: ops::Rem<Output = T>, const E: u8> ops::Rem for FixedDecimal<T, E> {
-    type Output = Self;
-
-    fn rem(self, rhs: Self) -> Self::Output {
-        Self(self.0.rem(rhs.0))
-    }
+impl<
+        T: ext_num_traits::ConstTenPow<E>
+            + ext_num_traits::Ten
+            + num_traits::Pow<u8, Output = T>
+            + ops::Mul<T, Output = T>,
+        const E: u8,
+    > num_traits::ConstOne for FixedDecimal<T, E>
+{
+    const ONE: Self = Self(T::RESULT);
 }
-impl<T: ops::Div<Output = T>, const E: u8> ops::Div for FixedDecimal<T, E> {
-    type Output = Self;
-
-    fn div(self, rhs: Self) -> Self::Output {
-        Self(self.0.div(rhs.0))
-    }
-}
-
-// Trait can't be const yet (https://github.com/rust-lang/rust/issues/67792), so we can't use ext_num_crates for it
-macro_rules! impl_const_one {
-    ($($tty:ty),+) => {
-        $(
-            impl<const E: u8> num_traits::ConstOne for FixedDecimal<$tty, E> {
-                const ONE: Self = Self((10 as $tty).pow(E as u32));
-            }
-        )+
-    };
-}
-impl_const_one!(i128, u128, i64, u64, i32, u32, i16, u16, i8, u8);
 
 impl<
         T: ext_num_traits::Ten + num_traits::Pow<u8, Output = T> + ops::Mul<T, Output = T>,

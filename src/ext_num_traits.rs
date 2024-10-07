@@ -34,6 +34,9 @@ pub(crate) trait NegateIfSigned {
 pub(crate) trait IsSigned {
     const IS_SIGNED: bool;
 }
+pub(crate) trait ConstTenPow<const E: u8> {
+    const RESULT: Self;
+}
 
 macro_rules! num_impl {
     ($tty:ty) => {
@@ -50,6 +53,10 @@ macro_rules! num_impl {
             fn is_positive(&self) -> bool {
                 self >= &0
             }
+        }
+
+        impl<const E: u8> ConstTenPow<E> for $tty {
+            const RESULT: Self = (10 as $tty).pow(E as u32);
         }
     };
 }
