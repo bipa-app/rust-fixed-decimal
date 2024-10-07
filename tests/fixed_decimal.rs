@@ -175,6 +175,14 @@ fn it_parses_positive_int_string() {
 }
 
 #[test]
+fn it_parses_explicitly_positive_int_string() {
+    let a = FixedDecimalI128::<0>::from_str("+233").unwrap();
+    // assert!(a.is_positive());
+    assert_eq!(233, a.mantissa());
+    assert_eq!("233", a.to_string());
+}
+
+#[test]
 fn it_parses_negative_int_string() {
     let a = FixedDecimalI128::<0>::from_str("-233").unwrap();
     // assert!(a.is_negative());
@@ -257,6 +265,36 @@ fn it_parses_positive_int_string_with_extra_right_zeros() {
     // assert!(a.is_positive());
     assert_eq!(98100, a.mantissa());
     assert_eq!("98.100", a.to_string());
+}
+
+#[test]
+fn it_doesnt_parses_invalid_digit() {
+    assert!(FixedDecimalI128::<2>::from_str("&123.45").is_err());
+    assert!(FixedDecimalI128::<2>::from_str("1&23.45").is_err());
+    assert!(FixedDecimalI128::<2>::from_str("12&3.45").is_err());
+    assert!(FixedDecimalI128::<2>::from_str("123&.45").is_err());
+    assert!(FixedDecimalI128::<2>::from_str("123.&45").is_err());
+    assert!(FixedDecimalI128::<2>::from_str("123.4&5").is_err());
+    assert!(FixedDecimalI128::<2>::from_str("123.45&").is_err());
+
+    assert!(FixedDecimalI128::<3>::from_str("&123.45").is_err());
+    assert!(FixedDecimalI128::<3>::from_str("1&23.45").is_err());
+    assert!(FixedDecimalI128::<3>::from_str("12&3.45").is_err());
+    assert!(FixedDecimalI128::<3>::from_str("123&.45").is_err());
+    assert!(FixedDecimalI128::<3>::from_str("123.&45").is_err());
+    assert!(FixedDecimalI128::<3>::from_str("123.4&5").is_err());
+    assert!(FixedDecimalI128::<3>::from_str("123.45&").is_err());
+}
+
+#[test]
+fn it_doesnt_parses_invalid_unicode_digit() {
+    assert!(FixedDecimalI128::<3>::from_str("ç123.45").is_err());
+    assert!(FixedDecimalI128::<3>::from_str("1ç23.45").is_err());
+    assert!(FixedDecimalI128::<3>::from_str("12ç3.45").is_err());
+    assert!(FixedDecimalI128::<3>::from_str("123ç.45").is_err());
+    assert!(FixedDecimalI128::<3>::from_str("123.ç45").is_err());
+    assert!(FixedDecimalI128::<3>::from_str("123.4ç5").is_err());
+    assert!(FixedDecimalI128::<3>::from_str("123.45ç").is_err());
 }
 
 proptest! {
