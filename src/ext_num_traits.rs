@@ -19,9 +19,6 @@ pub(crate) trait UAbs: ExtSigned {
 
 pub(crate) trait Sign {
     fn is_positive(&self) -> bool;
-    fn is_negative(&self) -> bool {
-        !self.is_positive()
-    }
 }
 
 pub(crate) trait ILog10: num_traits::Unsigned {

@@ -46,7 +46,7 @@ where
 
     let mut rep = ArrayString::<MAX_STR_BUFFER_SIZE>::new();
 
-    if append_sign && value.0.is_negative() {
+    if append_sign && !value.0.is_positive() {
         rep.push('-');
     }
 
