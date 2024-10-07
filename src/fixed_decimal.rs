@@ -136,12 +136,15 @@ where
 impl<T, const E: u8> FromStr for FixedDecimal<T, E>
 where
     T: num_traits::ConstZero
+        + num_traits::ConstOne
         + FromStr
         + From<u8>
         + ext_num_traits::ConstTen
         + num_traits::CheckedMul
         + num_traits::CheckedAdd
-        + ext_num_traits::CheckedNeg
+        + ext_num_traits::NegateIfSigned
+        + ext_num_traits::IsSigned
+        + Copy
         + std::fmt::Debug,
     <T as FromStr>::Err: std::fmt::Debug,
 {

@@ -98,12 +98,15 @@ pub(crate) fn parse_str_radix_10_exact<T, const SCALE: u8>(
 ) -> Result<FixedDecimal<T, SCALE>, ParseError>
 where
     T: num_traits::ConstZero
+        + num_traits::ConstOne
         + FromStr
         + From<u8>
         + ext_num_traits::ConstTen
         + num_traits::CheckedMul
         + num_traits::CheckedAdd
-        + ext_num_traits::CheckedNeg
+        + ext_num_traits::NegateIfSigned
+        + ext_num_traits::IsSigned
+        + Copy
         + std::fmt::Debug,
     <T as FromStr>::Err: std::fmt::Debug,
 {
@@ -126,7 +129,13 @@ where
     let mut digits = str.chars().peekable();
     let mut acc = T::ZERO;
     let is_negative = match digits.next() {
-        Some('-') => Ok(true),
+        Some('-') => {
+            if T::IS_SIGNED {
+                Ok(true)
+            } else {
+                Err(ParseError::InvalidDigit)
+            }
+        }
         Some('+') => Ok(false),
         Some(c) if c.is_digit(10) => {
             acc = acc
@@ -137,14 +146,7 @@ where
         None => Err(ParseError::Empty),
         _ => Err(ParseError::InvalidDigit),
     }?;
-    let pack = |v: T| {
-        if is_negative {
-            v.checked_neg().ok_or(ParseError::InvalidDigit)
-        } else {
-            Ok(v)
-        }
-        .map(FixedDecimal::<T, SCALE>::new)
-    };
+    let pack = |v: T| Ok(v).map(FixedDecimal::<T, SCALE>::new);
     let overflow_err = || {
         if is_negative {
             ParseError::NegOverflow
@@ -153,6 +155,11 @@ where
         }
     };
 
+    let sign_carry = if is_negative {
+        T::ONE.negate_if_signed()
+    } else {
+        T::ONE
+    };
     loop {
         match digits.next() {
             Some('.') => break,
@@ -165,7 +172,7 @@ where
             Some(c) => {
                 acc = acc.checked_mul(&T::TEN).ok_or_else(overflow_err)?;
                 acc = acc
-                    .checked_add(&digit_to_int(c)?.into())
+                    .checked_add(&(sign_carry * digit_to_int(c)?.into()))
                     .ok_or_else(overflow_err)?;
             }
         }
@@ -176,7 +183,7 @@ where
             Some(c) => {
                 acc = acc.checked_mul(&T::TEN).ok_or_else(overflow_err)?;
                 acc = acc
-                    .checked_add(&digit_to_int(c)?.into())
+                    .checked_add(&(sign_carry * digit_to_int(c)?.into()))
                     .ok_or_else(overflow_err)?;
             }
         }

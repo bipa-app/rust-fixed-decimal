@@ -28,8 +28,11 @@ pub(crate) trait ILog10: num_traits::Unsigned {
     fn ilog10(self) -> u32;
 }
 
-pub(crate) trait CheckedNeg: Sized {
-    fn checked_neg(self) -> Option<Self>;
+pub(crate) trait NegateIfSigned {
+    fn negate_if_signed(self) -> Self;
+}
+pub(crate) trait IsSigned {
+    const IS_SIGNED: bool;
 }
 
 macro_rules! num_impl {
@@ -57,6 +60,10 @@ macro_rules! sign_impl {
             type Unsigned = $utty;
         }
 
+        impl IsSigned for $tty {
+            const IS_SIGNED: bool = true;
+        }
+
         impl UAbs for $tty {
             fn uabs(self) -> Self::Unsigned {
                 if self == Self::MIN {
@@ -67,9 +74,9 @@ macro_rules! sign_impl {
             }
         }
 
-        impl CheckedNeg for $tty {
-            fn checked_neg(self) -> Option<Self> {
-                Some(-self)
+        impl NegateIfSigned for $tty {
+            fn negate_if_signed(self) -> Self {
+                -self
             }
         }
 
@@ -83,6 +90,9 @@ macro_rules! unsign_impl {
             type Unsigned = Self;
         }
 
+        impl IsSigned for $tty {
+            const IS_SIGNED: bool = false;
+        }
         impl UAbs for $tty {
             fn uabs(self) -> Self {
                 self
@@ -95,9 +105,9 @@ macro_rules! unsign_impl {
             }
         }
 
-        impl CheckedNeg for $tty {
-            fn checked_neg(self) -> Option<Self> {
-                None
+        impl NegateIfSigned for $tty {
+            fn negate_if_signed(self) -> Self {
+                self
             }
         }
 
