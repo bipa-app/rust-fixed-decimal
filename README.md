@@ -3,9 +3,13 @@
 A Fixed Decimal number implementation written in pure Rust suitable for financial calculations that require significant
 integral and fractional digits explicit round approuch.
 
-The binary representation consists of native rust integer number, a const gennexic scaling factor used to specify the decimal fraction.
+The binary representation consists of native rust integer number, a const generic scaling factor used to specify the decimal fraction.
 
-This library use a mixed aprouch, inpered by `rust-decimal` and `fixed`.
+An *n* fixed-point number has `SCALE` digits as fractional
+part, and the reminder as integer part. For example,
+`FixedDecimalI164::<8>` is a 64 signed fixed-point number in format `IIIIIIIIIII.FFFFFFFF`, storing values between 92233720368.54775807 and -92233720368.54775808.
+
+This library use a mixed aprouch, inspired by `rust-decimal` and `fixed`.
 
 ## Installing
 
@@ -27,9 +31,9 @@ use the procedural macro that can be enabled using the `macros` feature:
 
 ```rust
 // Import the `rust_fixed_decimal_macros` crate and use the macro directly from there.
-use rust_fixed_decimal::dec_i128 as dec;
+use rust_fixed_decimal::dec;
 
-let number = dec!(-1.23) + dec!(3.45);
+let number: FixedDecimalI128 = dec!(-1.23) + dec!(3.45);
 assert_eq!(number, dec!(2.22));
 assert_eq!(number.to_string(), "2.22");
 ```
@@ -55,8 +59,8 @@ Once you have instantiated your `FixedDecimal` number you can perform calculatio
 ```rust
 use rust_fixed_decimal::prelude::*;
 
-let amount = dec_i128!(25.120);
-let tax_percentage = dec_i128!(0.085);
+let amount: FixedDecimalI128 = dec!(25.120);
+let tax_percentage = dec!(0.085);
 let total = amount + amount * tax_percentage;
 assert_eq!(total, dec!(27.260));
 ```
