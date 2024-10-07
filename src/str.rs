@@ -1,3 +1,5 @@
+use std::str::FromStr;
+
 use crate::{
     constants::MAX_STR_BUFFER_SIZE,
     ext_num_traits::{self, ILog10, Ten},
@@ -82,41 +84,112 @@ where
 
 // TODO: add inner types
 #[derive(Clone, Debug, PartialEq)]
-pub struct ParseError;
+#[non_exhaustive]
+pub enum ParseError {
+    Empty,
+    InvalidDigit,
+    PosOverflow,
+    NegOverflow,
+    Underflow,
+}
 
 pub(crate) fn parse_str_radix_10_exact<T, const SCALE: u8>(
     str: &str,
-) -> Result<FixedDecimal<T, SCALE>, ParseError> {
-    todo!()
-    // let is_negative = str.starts_with('-');
-    // let (int, frac) = str
-    //     .split_once('.')
-    //     .map_or((str, None), |(int, frac)| (int, Some(frac)));
+) -> Result<FixedDecimal<T, SCALE>, ParseError>
+where
+    T: num_traits::ConstZero
+        + FromStr
+        + From<u8>
+        + ext_num_traits::ConstTen
+        + num_traits::CheckedMul
+        + num_traits::CheckedAdd
+        + ext_num_traits::CheckedNeg
+        + std::fmt::Debug,
+    <T as FromStr>::Err: std::fmt::Debug,
+{
+    fn digit_to_int(c: char) -> Result<u8, ParseError> {
+        match c {
+            '0' => Ok(0u8),
+            '1' => Ok(1),
+            '2' => Ok(2),
+            '3' => Ok(3),
+            '4' => Ok(4),
+            '5' => Ok(5),
+            '6' => Ok(6),
+            '7' => Ok(7),
+            '8' => Ok(8),
+            '9' => Ok(9),
+            _ => Err(ParseError::InvalidDigit),
+        }
+    }
 
-    // if frac.is_some_and(|f| f.trim_start_matches('0').len() > SCALE.into()) {
-    //     return Err(ParseError);
-    // }
+    let mut digits = str.chars().peekable();
+    let mut acc = T::ZERO;
+    let is_negative = match digits.next() {
+        Some('-') => Ok(true),
+        Some('+') => Ok(false),
+        Some(c) if c.is_digit(10) => {
+            acc = acc
+                .checked_add(&digit_to_int(c)?.into())
+                .ok_or(ParseError::PosOverflow)?;
+            Ok(false)
+        }
+        None => Err(ParseError::Empty),
+        _ => Err(ParseError::InvalidDigit),
+    }?;
+    let pack = |v: T| {
+        if is_negative {
+            v.checked_neg().ok_or(ParseError::InvalidDigit)
+        } else {
+            Ok(v)
+        }
+        .map(FixedDecimal::<T, SCALE>::new)
+    };
+    let overflow_err = || {
+        if is_negative {
+            ParseError::NegOverflow
+        } else {
+            ParseError::PosOverflow
+        }
+    };
 
-    // let int = if int.is_empty() && !str.is_empty() {
-    //     0u8.into()
-    // } else {
-    //     str::parse::<T>(int).map_err(|_| ParseError)?
-    // };
-    // let frac = frac.map_or(Ok(T::ZERO), |v| str::parse::<T>(v).map_err(|_| ParseError))?;
-    // let high = if !int.is_zero() {
-    //     let mut shift: T = 1u8.into();
-    //     for _ in 0..SCALE {
-    //         shift = shift
-    //             .checked_mul(&(10u8.into()))
-    //             .ok_or_else(|| ParseError)?;
-    //     }
-    //     int.checked_mul(&shift).ok_or_else(|| ParseError)?
-    // } else {
-    //     T::ZERO
-    // };
+    loop {
+        match digits.next() {
+            Some('.') => break,
+            None => {
+                for _ in 0..SCALE {
+                    acc = acc.checked_mul(&T::TEN).ok_or_else(overflow_err)?;
+                }
+                return pack(acc);
+            }
+            Some(c) => {
+                acc = acc.checked_mul(&T::TEN).ok_or_else(overflow_err)?;
+                acc = acc
+                    .checked_add(&digit_to_int(c)?.into())
+                    .ok_or_else(overflow_err)?;
+            }
+        }
+    }
+    for _ in 0..SCALE {
+        match digits.next() {
+            None => return pack(acc),
+            Some(c) => {
+                acc = acc.checked_mul(&T::TEN).ok_or_else(overflow_err)?;
+                acc = acc
+                    .checked_add(&digit_to_int(c)?.into())
+                    .ok_or_else(overflow_err)?;
+            }
+        }
+    }
 
-    // // TODO: improve gambiarra
-    // let frac = if is_negative { frac.force_neg() } else { frac };
-
-    // Ok(FixedDecimal::<T, SCALE>::new(high + frac))
+    match digits.next() {
+        None => pack(acc),
+        Some(c) => {
+            if digits.chain(std::iter::once(c)).all(|d| d.is_digit(10)) {
+                Err(ParseError::Underflow)
+            } else {
+                Err(ParseError::InvalidDigit)
+            }
+        }
+    }
 }

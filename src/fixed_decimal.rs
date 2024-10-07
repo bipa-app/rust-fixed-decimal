@@ -133,7 +133,18 @@ where
     }
 }
 
-impl<T, const E: u8> FromStr for FixedDecimal<T, E> {
+impl<T, const E: u8> FromStr for FixedDecimal<T, E>
+where
+    T: num_traits::ConstZero
+        + FromStr
+        + From<u8>
+        + ext_num_traits::ConstTen
+        + num_traits::CheckedMul
+        + num_traits::CheckedAdd
+        + ext_num_traits::CheckedNeg
+        + std::fmt::Debug,
+    <T as FromStr>::Err: std::fmt::Debug,
+{
     type Err = crate::str::ParseError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
