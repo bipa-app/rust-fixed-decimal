@@ -1,5 +1,6 @@
 mod constants;
 mod error;
+mod ext_num_traits;
 mod fixed_decimal;
 mod str;
 
