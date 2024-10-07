@@ -110,7 +110,7 @@ where
         + std::fmt::Debug,
     <T as FromStr>::Err: std::fmt::Debug,
 {
-    fn digit_to_int(c: char) -> Result<u8, ParseError> {
+    fn digit_to_int(c: &char) -> Result<u8, ParseError> {
         match c {
             '0' => Ok(0u8),
             '1' => Ok(1),
@@ -128,19 +128,25 @@ where
 
     let mut digits = str.chars().peekable();
     let mut acc = T::ZERO;
-    let is_negative = match digits.next() {
+    let is_negative = match digits.peek() {
         Some('-') => {
+            digits.next();
             if T::IS_SIGNED {
                 Ok(true)
             } else {
                 Err(ParseError::InvalidDigit)
             }
         }
-        Some('+') => Ok(false),
+        Some('+') => {
+            digits.next();
+            Ok(false)
+        }
+        Some('.') => Ok(false),
         Some(c) if c.is_digit(10) => {
             acc = acc
                 .checked_add(&digit_to_int(c)?.into())
                 .ok_or(ParseError::PosOverflow)?;
+            digits.next();
             Ok(false)
         }
         None => Err(ParseError::Empty),
@@ -172,7 +178,7 @@ where
             Some(c) => {
                 acc = acc.checked_mul(&T::TEN).ok_or_else(overflow_err)?;
                 acc = acc
-                    .checked_add(&(sign_carry * digit_to_int(c)?.into()))
+                    .checked_add(&(sign_carry * digit_to_int(&c)?.into()))
                     .ok_or_else(overflow_err)?;
             }
         }
@@ -183,7 +189,7 @@ where
             Some(c) => {
                 acc = acc.checked_mul(&T::TEN).ok_or_else(overflow_err)?;
                 acc = acc
-                    .checked_add(&(sign_carry * digit_to_int(c)?.into()))
+                    .checked_add(&(sign_carry * digit_to_int(&c)?.into()))
                     .ok_or_else(overflow_err)?;
             }
         }

@@ -253,7 +253,6 @@ fn it_parses_big_scale() {
 
 proptest! {
     #[test]
-    #[ignore]
     fn formats_and_parses_give_same_result_i128(v in any::<i128>()) {
         let d = FixedDecimalI128::<0>::new(v);
         assert_eq!(d.to_string().parse(), Ok(d));
@@ -272,7 +271,6 @@ proptest! {
     }
 
     #[test]
-    #[ignore]
     fn formats_and_parses_give_same_result_u128(v in any::<u128>()) {
         let d = FixedDecimalU128::<0>::new(v);
         assert_eq!(d.to_string().parse(), Ok(d));
