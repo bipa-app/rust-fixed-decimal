@@ -69,17 +69,12 @@ assert_eq!(total, dec!(27.260));
 **Serde**
 
 * [serde-str](#serde-str)
-* [serde-str-exact](#serde-str-exact)
 
 ### `serde-str`
 
 This is typically useful for `bincode` or `csv` like implementations.
 
 It uses `FromStr` as default method for hanglig `FixedDecimal` numbers for serialization/deserialization rules.
-
-### `serde-str-lossy`
-It uses `from_str_lossy` as default method for hanglig `FixedDecimal` numbers for serialization/deserialization rules.
-Return error case receive more decimal cases them especified by the type.
 
 ## Building
 
