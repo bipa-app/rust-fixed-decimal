@@ -9,7 +9,7 @@ An *n* fixed-point number has `SCALE` digits as fractional
 part, and the reminder as integer part. For example,
 `FixedDecimalI164::<8>` is a 64 signed fixed-point number in format `IIIIIIIIIII.FFFFFFFF`, storing values between 92233720368.54775807 and -92233720368.54775808.
 
-This library use a mixed aprouch, inspired by `rust-decimal` and `fixed`.
+This library use a mixed aprouch, inspired by [`rust-decimal`](https://crates.io/crates/rust_decimal), [`fixed`](https://crates.io/crates/fixed) and [`bnum`](https://crates.io/crates/bnum).
 
 ## Installing
 
