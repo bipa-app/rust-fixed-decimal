@@ -226,31 +226,15 @@ impl<T: ops::Neg<Output = T>, const E: u8> ops::Neg for FixedDecimal<T, E> {
     }
 }
 
-impl<T: ops::Mul<Output = T>, const E: u8> ops::Mul for FixedDecimal<T, E> {
+impl<T: ops::Mul<Output = T>, const E: u8> ops::Mul<T> for FixedDecimal<T, E> {
     type Output = Self;
 
-    fn mul(self, rhs: Self) -> Self::Output {
-        Self(self.0.mul(rhs.0))
+    fn mul(self, rhs: T) -> Self::Output {
+        Self(self.0.mul(rhs))
     }
 }
 
-impl<
-        T: ext_num_traits::ConstTenPow<E>
-            + ext_num_traits::Ten
-            + num_traits::Pow<u8, Output = T>
-            + ops::Mul<T, Output = T>,
-        const E: u8,
-    > num_traits::ConstOne for FixedDecimal<T, E>
-{
-    const ONE: Self = Self(T::RESULT);
-}
-
-impl<
-        T: ext_num_traits::Ten + num_traits::Pow<u8, Output = T> + ops::Mul<T, Output = T>,
-        const E: u8,
-    > num_traits::One for FixedDecimal<T, E>
-{
-    fn one() -> Self {
-        Self(T::ten().pow(E))
-    }
+#[expect(private_bounds)]
+impl<T: ext_num_traits::ConstTenPow<E>, const E: u8> FixedDecimal<T, E> {
+    pub const ONE: Self = Self(T::RESULT);
 }

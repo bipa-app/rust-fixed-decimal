@@ -142,15 +142,12 @@ where
             Ok(false)
         }
         Some('.') => Ok(false),
-        Some(c) if c.is_digit(10) => {
-            acc = acc
-                .checked_add(&digit_to_int(c)?.into())
-                .ok_or(ParseError::PosOverflow)?;
+        Some(c) => {
+            acc = acc + digit_to_int(c)?.into();
             digits.next();
             Ok(false)
         }
         None => Err(ParseError::Empty),
-        _ => Err(ParseError::InvalidDigit),
     }?;
     let pack = |v: T| Ok(v).map(FixedDecimal::<T, SCALE>::new);
     let overflow_err = || {

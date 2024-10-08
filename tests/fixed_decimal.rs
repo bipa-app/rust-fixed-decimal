@@ -1,9 +1,9 @@
 // Most of test case are based on rust_decimal test cases
-use num_traits::{CheckedAdd, ConstOne};
+use num_traits::*;
 use proptest::prelude::*;
 use std::str::FromStr;
 
-use rust_fixed_decimal::{FixedDecimal, FixedDecimalI128, FixedDecimalU128};
+use rust_fixed_decimal::{FixedDecimal, FixedDecimalI128, FixedDecimalI8, FixedDecimalU128};
 
 // Consts
 #[test]
@@ -24,6 +24,18 @@ fn it_consts_one() {
         FixedDecimalI128::<7>::ONE,
         FixedDecimalI128::from_str("1").unwrap()
     );
+}
+
+#[test]
+fn it_zero() {
+    assert_eq!(FixedDecimalI128::<0>::zero(), FixedDecimalI128::new(0));
+    assert_eq!(FixedDecimalI128::<7>::zero(), FixedDecimalI128::new(0));
+}
+
+#[test]
+fn it_clones() {
+    let d = FixedDecimalI128::<7>::from_str("1").unwrap();
+    assert_eq!(d, d.clone());
 }
 
 // Formatting
@@ -249,10 +261,9 @@ fn it_parses_big_scale() {
     let a = FixedDecimalI128::<{ u8::MAX }>::from_str(s).expect("i128::MAX");
     assert_eq!(s, a.to_string());
 
-    // TODO:
-    // let s = "-0.000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000170141183460469231731687303715884105728";
-    // let a = FixedDecimalI128::<{ u8::MAX }>::from_str(s).expect("i128::MIN");
-    // assert_eq!(s, a.to_string());
+    let s = "-0.000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000170141183460469231731687303715884105728";
+    let a = FixedDecimalI128::<{ u8::MAX }>::from_str(s).expect("i128::MIN");
+    assert_eq!(s, a.to_string());
 
     let s = "0.000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000340282366920938463463374607431768211455";
     let a = FixedDecimalU128::<{ u8::MAX }>::from_str(s).expect("u128::MAX");
@@ -295,6 +306,16 @@ fn it_doesnt_parses_invalid_unicode_digit() {
     assert!(FixedDecimalI128::<3>::from_str("123.ç45").is_err());
     assert!(FixedDecimalI128::<3>::from_str("123.4ç5").is_err());
     assert!(FixedDecimalI128::<3>::from_str("123.45ç").is_err());
+}
+
+#[test]
+fn it_doesnt_parses_huge_decimal_cases() {
+    assert!(FixedDecimal::<i16, 3>::from_str("32.767").is_ok());
+    assert!(FixedDecimal::<i16, 3>::from_str("32.768").is_err());
+    assert!(FixedDecimal::<i16, 0>::from_str("32768").is_err());
+
+    assert!(FixedDecimal::<i16, 3>::from_str("33.7").is_err());
+    assert!(FixedDecimal::<i16, 10>::from_str("10").is_err());
 }
 
 proptest! {
@@ -407,6 +428,15 @@ fn it_can_addassign() {
     assert_eq!("4.97", a.to_string());
 }
 
+#[test]
+#[should_panic]
+fn it_panics_on_add_overflow() {
+    let a = FixedDecimalI8::<2>::new(100);
+    let b = FixedDecimalI8::<2>::new(100);
+
+    let _ = a + b;
+}
+
 proptest! {
     #[test]
     fn adds_works_as_internal(a in any::<i128>(), b in any::<i128>()) {
@@ -418,6 +448,37 @@ proptest! {
     #[test]
     fn checked_adds_works_as_internal(a in any::<i128>(), b in any::<i128>()) {
         assert_eq!(FixedDecimalI128::<7>::new(a).checked_add(&FixedDecimalI128::<7>::new(b)), a.checked_add(b).map(FixedDecimalI128::<7>::new))
+    }
+}
+
+// Sub
+
+#[test]
+fn it_can_sub_simple() {
+    let zero = FixedDecimalI128::<2>::ONE - FixedDecimalI128::<2>::ONE;
+    assert!(zero.is_zero());
+    let minus_one = zero - FixedDecimalI128::<2>::ONE;
+    assert_eq!(minus_one, FixedDecimalI128::<2>::from_str("-1").unwrap());
+}
+
+// Mult
+
+#[test]
+fn it_can_mult_simple() {
+    let one = FixedDecimalI128::<2>::ONE * 3i128;
+    assert_eq!(one, FixedDecimalI128::<2>::from_str("3").unwrap());
+}
+
+// Ord
+proptest! {
+    #[test]
+    fn ord_works_as_internal(a in any::<i128>(), b in any::<i128>()) {
+        assert_eq!(FixedDecimalI128::<7>::new(a).cmp(&FixedDecimalI128::<7>::new(b)), a.cmp(&b))
+    }
+
+    #[test]
+    fn partial_ord_works_as_internal(a in any::<i128>(), b in any::<i128>()) {
+        assert_eq!(FixedDecimalI128::<7>::new(a).partial_cmp(&FixedDecimalI128::<7>::new(b)), a.partial_cmp(&b))
     }
 }
 
