@@ -121,3 +121,8 @@ If you have further questions about the suitability of this library for your pro
 [discussion](https://github.com/bipa-app/rust-fixed-decimal/discussions) or open
 an [issue](https://github.com/bipa-app/rust-fixed-decimal/issues) and we'll
 do our best to help.
+
+
+## Licensing
+
+`rust-fixed-decimal` is licensed under either the MIT license or the Apache License 2.0.
