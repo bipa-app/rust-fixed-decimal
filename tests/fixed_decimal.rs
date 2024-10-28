@@ -4,6 +4,11 @@ use proptest::prelude::*;
 use std::str::FromStr;
 
 use rust_fixed_decimal::{FixedDecimal, FixedDecimalI128, FixedDecimalI8, FixedDecimalU128};
+macro_rules! d5 {
+    ($v:literal) => {
+        FixedDecimalI128::<6>::from_str($v).unwrap()
+    };
+}
 
 // Consts
 #[test]
@@ -481,6 +486,311 @@ proptest! {
         assert_eq!(FixedDecimalI128::<7>::new(a).partial_cmp(&FixedDecimalI128::<7>::new(b)), a.partial_cmp(&b))
     }
 }
+
+// (Try)From integers
+#[test]
+fn it_converts_to_f64() {
+    assert_eq!(d5!("5").to_f64(), Some(5f64));
+    assert_eq!(d5!("-5").to_f64(), Some(-5f64));
+    assert_eq!(d5!("0.1").to_f64(), Some(0.1));
+    assert_eq!(d5!("0.0").to_f64(), Some(0f64));
+    assert_eq!(d5!("-0.0").to_f64(), Some(0f64));
+    assert_eq!(d5!("0.00025").to_f64(), Some(0.00025));
+    assert_eq!(d5!("100000").to_f64(), Some(1e5));
+}
+
+/*
+#[test]
+fn it_converts_to_f64_try() {
+    let tests = &[
+        ("5", Some(5f64)),
+        ("-5", Some(-5f64)),
+        ("0.1", Some(0.1f64)),
+        ("0.0", Some(0f64)),
+        ("-0.0", Some(0f64)),
+        ("0.0000000000025", Some(0.25e-11f64)),
+        ("1000000.0000000000025", Some(1e6f64)),
+        ("0.000000000000000000000000025", Some(0.25e-25_f64)),
+        (
+            "2.1234567890123456789012345678",
+            Some(2.1234567890123456789012345678_f64),
+        ),
+        ("21234567890123456789012345678", Some(21234567890123458000000000000_f64)),
+        (
+            "-21234567890123456789012345678",
+            Some(-21234567890123458000000000000_f64),
+        ),
+        ("1.59283191", Some(1.59283191_f64)),
+    ];
+    for &(value, expected) in tests {
+        let value = Decimal::from_str(value).unwrap().try_into().ok();
+        assert_eq!(expected, value);
+    }
+}
+*/
+
+#[test]
+fn it_converts_to_i64() {
+    assert_eq!(d5!("5").to_i64(), Some(5i64));
+    assert_eq!(d5!("-5").to_i64(), Some(-5i64));
+    assert_eq!(d5!("5.12345").to_i64(), Some(5i64));
+    assert_eq!(d5!("-5.12345").to_i64(), Some(-5i64));
+    assert_eq!(d5!("-9223372036854775808").to_i64(), Some(i64::MIN));
+    assert_eq!(d5!("9223372036854775807").to_i64(), Some(i64::MAX));
+    assert_eq!(d5!("-9223372036854775809").to_i64(), None);
+    assert_eq!(d5!("9223372036854775808").to_i64(), None);
+}
+
+#[test]
+fn it_converts_to_u64() {
+    assert_eq!(d5!("5").to_u64(), Some(5u64));
+    assert_eq!(d5!("-5").to_u64(), None);
+    assert_eq!(d5!("5.12345").to_u64(), Some(5u64));
+    assert_eq!(d5!("18446744073709551615").to_u64(), Some(u64::MAX));
+    assert_eq!(d5!("18446744073709551616").to_u64(), None);
+}
+
+#[test]
+fn it_converts_to_i128() {
+    assert_eq!(d5!("5").to_i128(), Some(5i128));
+    assert_eq!(d5!("-5").to_i128(), Some(-5i128));
+    assert_eq!(d5!("5.12345").to_i128(), Some(5i128));
+    assert_eq!(d5!("-5.12345").to_i128(), Some(-5i128));
+    assert_eq!(
+        d5!("-170141183460469231731687303715884").to_i128(),
+        Some(-170141183460469231731687303715884)
+    );
+    assert_eq!(
+        d5!("170141183460469231731687303715884").to_i128(),
+        Some(170141183460469231731687303715884)
+    );
+}
+
+#[test]
+fn it_converts_to_u128() {
+    assert_eq!(d5!("5").to_u128(), Some(5u128));
+    assert_eq!(d5!("-5").to_u128(), None);
+    assert_eq!(d5!("5.12345").to_u128(), Some(5u128));
+    assert_eq!(
+        d5!("170141183460469231731687303715884").to_u128(),
+        Some(170141183460469231731687303715884)
+    );
+}
+
+/*
+#[test]
+fn it_converts_from_i128() {
+    let tests: &[(i128, Option<&str>)] = &[
+        (5, Some("5")),
+        (-5, Some("-5")),
+        (0x7FFF_FFFF_FFFF_FFFF, Some("9223372036854775807")),
+        (92233720368547758089, Some("92233720368547758089")),
+        (0xFFFF_FFFF_FFFF_FFFF_FFFF_FFFF, Some("79228162514264337593543950335")),
+        (0x7FFF_FFFF_FFFF_FFFF_FFFF_FFFF_FFFF_FFFF, None),
+        (i128::MIN, None),
+        (i128::MAX, None),
+    ];
+    for (value, expected) in tests {
+        let from_i128 = num_traits::FromPrimitive::from_i128(*value);
+
+        match expected {
+            Some(expected_value) => {
+                let decimal = Decimal::from_str(expected_value).unwrap();
+                assert_eq!(from_i128, Some(decimal));
+            }
+            None => assert!(from_i128.is_none()),
+        }
+    }
+}
+
+#[test]
+fn it_converts_from_u128() {
+    let tests: &[(u128, Option<&str>)] = &[
+        (5, Some("5")),
+        (0xFFFF_FFFF_FFFF_FFFF, Some("18446744073709551615")),
+        (0xFFFF_FFFF_FFFF_FFFF_FFFF_FFFF, Some("79228162514264337593543950335")),
+        (0x7FFF_FFFF_FFFF_FFFF_FFFF_FFFF_FFFF_FFFF, None),
+        (u128::MAX, None),
+    ];
+    for (value, expected) in tests {
+        let from_u128 = num_traits::FromPrimitive::from_u128(*value);
+
+        match expected {
+            Some(expected_value) => {
+                let decimal = Decimal::from_str(expected_value).unwrap();
+                assert_eq!(from_u128, Some(decimal));
+            }
+            None => assert!(from_u128.is_none()),
+        }
+    }
+}
+
+#[test]
+fn it_converts_from_str() {
+    assert_eq!(Decimal::try_from("1").unwrap(), Decimal::ONE);
+    assert_eq!(Decimal::try_from("10").unwrap(), Decimal::TEN);
+}
+
+#[test]
+fn it_converts_from_f32() {
+    use num_traits::FromPrimitive;
+
+    let tests = [
+        (0.1_f32, "0.1"),
+        (1_f32, "1"),
+        (0_f32, "0"),
+        (0.12345_f32, "0.12345"),
+        (0.1234567800123456789012345678_f32, "0.12345678"),
+        (0.12345678901234567890123456789_f32, "0.12345679"),
+        (0.00000000000000000000000000001_f32, "0"),
+        (5.1_f32, "5.1"),
+    ];
+
+    for &(input, expected) in &tests {
+        assert_eq!(
+            expected,
+            Decimal::from_f32(input).unwrap().to_string(),
+            "from_f32({input})"
+        );
+        assert_eq!(
+            expected,
+            Decimal::try_from(input).unwrap().to_string(),
+            "try_from({input})"
+        );
+    }
+}
+
+#[test]
+fn it_converts_from_f32_limits() {
+    use num_traits::FromPrimitive;
+
+    assert!(Decimal::from_f32(f32::NAN).is_none(), "from_f32(f32::NAN)");
+    assert!(Decimal::from_f32(f32::INFINITY).is_none(), "from_f32(f32::INFINITY)");
+    assert!(Decimal::try_from(f32::NAN).is_err(), "try_from(f32::NAN)");
+    assert!(Decimal::try_from(f32::INFINITY).is_err(), "try_from(f32::INFINITY)");
+
+    // These overflow
+    assert!(Decimal::from_f32(f32::MAX).is_none(), "from_f32(f32::MAX)");
+    assert!(Decimal::from_f32(f32::MIN).is_none(), "from_f32(f32::MIN)");
+    assert!(Decimal::try_from(f32::MAX).is_err(), "try_from(f32::MAX)");
+    assert!(Decimal::try_from(f32::MIN).is_err(), "try_from(f32::MIN)");
+}
+
+#[test]
+fn it_converts_from_f32_retaining_bits() {
+    let tests = [
+        (0.1_f32, "0.100000001490116119384765625"),
+        (2_f32, "2"),
+        (4.000_f32, "4"),
+        (5.1_f32, "5.099999904632568359375"),
+    ];
+
+    for &(input, expected) in &tests {
+        assert_eq!(
+            expected,
+            Decimal::from_f32_retain(input).unwrap().to_string(),
+            "from_f32_retain({input})"
+        );
+    }
+}
+
+#[test]
+fn it_converts_from_f64() {
+    use num_traits::FromPrimitive;
+
+    let tests = [
+        (0.1_f64, "0.1"),
+        (1_f64, "1"),
+        (0_f64, "0"),
+        (0.12345_f64, "0.12345"),
+        (0.1234567890123456089012345678_f64, "0.1234567890123456"),
+        (0.12345678901234567890123456789_f64, "0.1234567890123457"),
+        (0.00000000000000000000000000001_f64, "0"),
+        (0.6927_f64, "0.6927"),
+        (0.00006927_f64, "0.00006927"),
+        (0.000000006927_f64, "0.000000006927"),
+        (5.1_f64, "5.1"),
+    ];
+
+    for &(input, expected) in &tests {
+        assert_eq!(
+            expected,
+            Decimal::from_f64(input).unwrap().to_string(),
+            "from_f64({input})"
+        );
+        assert_eq!(
+            expected,
+            Decimal::try_from(input).unwrap().to_string(),
+            "try_from({input})"
+        );
+    }
+}
+
+#[test]
+fn it_converts_from_f64_limits() {
+    use num_traits::FromPrimitive;
+
+    assert!(Decimal::from_f64(f64::NAN).is_none(), "from_f64(f64::NAN)");
+    assert!(Decimal::from_f64(f64::INFINITY).is_none(), "from_f64(f64::INFINITY)");
+    assert!(Decimal::try_from(f64::NAN).is_err(), "try_from(f64::NAN)");
+    assert!(Decimal::try_from(f64::INFINITY).is_err(), "try_from(f64::INFINITY)");
+
+    // These overflow
+    assert!(Decimal::from_f64(f64::MAX).is_none(), "from_f64(f64::MAX)");
+    assert!(Decimal::from_f64(f64::MIN).is_none(), "from_f64(f64::MIN)");
+    assert!(Decimal::try_from(f64::MAX).is_err(), "try_from(f64::MIN)");
+    assert!(Decimal::try_from(f64::MIN).is_err(), "try_from(f64::MAX)");
+}
+
+#[test]
+fn it_converts_from_f64_dec_limits() {
+    use num_traits::FromPrimitive;
+
+    // Note Decimal MAX is: 79_228_162_514_264_337_593_543_950_335
+    let over_max = 79_228_162_514_264_355_185_729_994_752_f64;
+    let max_plus_one = 79_228_162_514_264_337_593_543_950_336_f64;
+    let under_max = 79_228_162_514_264_328_797_450_928_128_f64;
+
+    assert!(
+        Decimal::from_f64(over_max).is_none(),
+        "from_f64(79_228_162_514_264_355_185_729_994_752_f64) -> none (too large)"
+    );
+    assert!(
+        Decimal::from_f64(max_plus_one).is_none(),
+        "from_f64(79_228_162_514_264_337_593_543_950_336_f64) -> none (too large)"
+    );
+    assert_eq!(
+        "79228162514264328797450928128",
+        Decimal::from_f64(under_max).unwrap().to_string(),
+        "from_f64(79_228_162_514_264_328_797_450_928_128_f64) -> some (inside limits)"
+    );
+}
+
+#[test]
+fn it_converts_from_f64_retaining_bits() {
+    let tests = [
+        (0.1_f64, "0.1000000000000000055511151231"),
+        (2_f64, "2"),
+        (4.000_f64, "4"),
+        (5.1_f64, "5.0999999999999996447286321175"),
+    ];
+
+    for &(input, expected) in &tests {
+        assert_eq!(
+            expected,
+            Decimal::from_f64_retain(input).unwrap().to_string(),
+            "from_f64_retain({input})"
+        );
+    }
+}
+
+#[test]
+fn it_converts_to_integers() {
+    assert_eq!(i64::try_from(Decimal::ONE), Ok(1));
+    assert_eq!(i64::try_from(Decimal::MAX), Err(Error::ConversionTo("i64".to_string())));
+    assert_eq!(u128::try_from(Decimal::ONE_HUNDRED), Ok(100));
+}
+*/
 
 // Serde
 #[cfg(feature = "serde")]
