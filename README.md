@@ -1,4 +1,6 @@
 # Fixed Decimal 
+Deprecated in favor of [`fast-num`](https://github.com/neogenie/fastnum)
+
 
 A Fixed Decimal number implementation written in pure Rust suitable for financial calculations that require significant
 integral and fractional digits explicit round approuch.
